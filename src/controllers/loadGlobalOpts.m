@@ -1,7 +1,7 @@
 function opt = loadGlobalOpts(dt, CONTROL_NUM, OPT_NUM)
     opt.dt = dt;                        % control sampling time
 
-    % opt.Lambda = diag([1 5]) * .1;      % filtered error gain
+    % opt.Lambda = diag([1 5]) * 2;      % filtered error gain
     opt.Lambda = diag([6 13]);      % filtered error gain
     % r = e2 + Lambda * e1
     

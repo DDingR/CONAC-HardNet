@@ -1,8 +1,8 @@
 function [nn, out] = nnHNproj(nn, opt, in)
 
 %% PARAMETERS
-max_iter = 15;
-Epsilon = diag([1e-2, 1e1]);
+max_iter = 1000;
+Epsilon = diag([1e0, 1e0]) * 0e0;
 tol = 1e-2;
 
 uMax2  = opt.cstr.uMax2;
@@ -26,6 +26,17 @@ n_updates = 0;
 % y와 동일한 자료형으로 맞춘다.
 b_l = cast([-uMax2; 0], 'like', y);
 b_u = cast([uMax2; u_ball^2], 'like', y);
+
+A_list = zeros(2, 2, max_iter, 'like', y);
+D = zeros(2, 2, 'like', y);
+
+%% RESIDUAL OF ORIGIANAL INPUT
+c_ori = [
+    in(2);
+    in(1)^2 + in(2)^2
+];
+r_ori = max(0, c_ori-b_u) ...
+  - max(0, b_l-c_ori);
 
 %% HARDNET++ ITERATIONS
 for iter = 1:max_iter
@@ -151,7 +162,7 @@ for iter = 1:max_iter
     %   dy^[iter+1]/dy^[0]
 
     grad_HNproj = A * grad_HNproj;
-
+    A_list(:,:,iter) = A;
     %% Forward-state update
     y = y_next;
     n_updates = n_updates + 1;
@@ -184,4 +195,13 @@ nn.proj_iters     = n_updates;
 nn.proj_grad_singular_values = svd(grad_HNproj);
 nn.proj_grad_norm = norm(grad_HNproj, 2);
 
+%
+nn.drdy = D*J;
+nn.r = r_ori;
+nn.uncon_y = in;
+
+if max(nn.proj_grad_singular_values) < 1e-1
+    warning('nnHNproj:grad_singular_values', ...
+        'Singular values of grad_HNproj are too small.');
+end
 end

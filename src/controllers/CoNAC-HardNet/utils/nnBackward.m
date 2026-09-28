@@ -20,13 +20,18 @@ function [nn, opt] = nnBackward(nn, opt, e, u_NN)
     %% HARD CONSTRAINTS (HardNet)
     grad_HNproj = nn.grad_HNproj;
     % grad_HNproj = grad_HNproj';
-    nnGrad = grad_HNproj * nnGrad; % chain rule
+    HNnnGrad = grad_HNproj * nnGrad; % chain rule
+    
+    % HN_lbd = .0;
+    % nnGrad = ((1-HN_lbd)*grad_HNproj + HN_lbd*eye(2,2)) * nnGrad; chain rule
 
     %% GRADIENT CALCULATION
     % find gradient; theta, lambda
-    th_grad = - opt.alpha * (nnGrad'*opt.W*e + cd'*lbd);
+    th_grad = - opt.alpha * (HNnnGrad'*opt.W*e + cd'*lbd);
     th_grad = th_grad + - opt.rho * nn.th;
     lbd_grad = diag(opt.beta) * c;
+
+    th_grad = th_grad + - opt.alpha * (nn.drdy*nnGrad)'*nn.r;
     
     th_grad = th_grad * opt.dt;
     lbd_grad = lbd_grad * opt.dt;

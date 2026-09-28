@@ -69,8 +69,8 @@ end
 
 CTRL_NUM = 4;
 color_list = [ ...
-    "blue";
     "cyan";
+    "blue";
     "magenta";
     "#808080";
 ];
