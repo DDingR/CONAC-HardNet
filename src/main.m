@@ -28,11 +28,11 @@ CTRL_LIST = {
     % struct("CTRL_NUM", 3, "OPT_NUM", 1, ...
     %     "SAVE_NAME", "AUX", ...
     %         "Color", "magenta"), ...
-    % struct("CTRL_NUM", 1, "OPT_NUM", 2, ...
-    %         "SAVE_NAME", "CONAC_LOW", ...
-    %             "Color", "cyan") ...
     struct("CTRL_NUM", 1, "OPT_NUM", 1, ...
-        "SAVE_NAME", "CONAC_HIGH", ...
+            "SAVE_NAME", "CONAC", ...
+                "Color", "cyan") ...
+    struct("CTRL_NUM", 4, "OPT_NUM", 1, ...
+        "SAVE_NAME", "CONAC_HARDNET", ...
         "Color", "blue"), ...
 };
 
@@ -64,7 +64,6 @@ for ctrl_idx = 1:1:length(CTRL_LIST)
     data.xd3_hist = zeros(num_x, num_t); data.xd3_hist = zeros(num_x, num_t);
     [xd1,xd2] = r_func(0);
     data.xd1_hist(:, 1) = xd1; data.xd2_hist(:, 1) = xd2;
-    data.r_hist = zeros(num_x, num_t); data.r_hist(:, 1) = zeros(num_x, 1);
     data.u_hist = zeros(num_u, num_t); data.u_hist(:, 1) = u;
     data.uSat_hist = zeros(num_u, num_t); data.uSat_hist(:, 1) = u;
 
@@ -75,6 +74,8 @@ for ctrl_idx = 1:1:length(CTRL_LIST)
         ctrl_path = "CoNAC-AUX";
     elseif CTRL_INFO.CTRL_NUM == 3 % Complex Aux.
         ctrl_path = "CoNAC-AUX-Comp";
+    elseif CTRL_INFO.CTRL_NUM == 4 % CONAC + HardNet++.
+        ctrl_path = "CoNAC-HardNet";
     else
         error("Invalid CONTROL_NUM. Must be 1, 2, or 3.");
     end
@@ -105,10 +106,14 @@ for ctrl_idx = 1:1:length(CTRL_LIST)
     for t_idx = 2:1:num_t
         [xd1,xd2,xd3] = r_func(t(t_idx));
         
+        DEBUG_TIME = 17;
+        if DEBUG_TIME < t(t_idx)
+            % fprintf("DEBUG TIME REACHED. Simulation stopped at t = %.2f\n", t(t_idx));
+        end
+
         e1 = x1 - xd1;
         e2 = x2 - xd2;
-
-        r = e2 + opt.Lambda * e1;       % filtered error
+        r  = e2 + opt.Lambda*e1; % filtered error
 
         if t_idx==2 || rem(t(t_idx)/dt, ctrl_dt/dt) == 0
             preControl
@@ -125,9 +130,6 @@ for ctrl_idx = 1:1:length(CTRL_LIST)
         end
         
         % step forward
-        % grad = grad_x([x1;x2], u_sat, t(t_idx));
-        % x1 = x1 + grad(1:2) * dt;
-        % x2 = x2 + grad(3:4) * dt;
         k1 = grad_x([x1;x2], u_sat, t(t_idx));
         k2 = grad_x([x1;x2] + k1*dt/2, u_sat, t(t_idx) + dt/2);
         k3 = grad_x([x1;x2] + k2*dt/2, u_sat, t(t_idx) + dt/2);
@@ -145,16 +147,11 @@ for ctrl_idx = 1:1:length(CTRL_LIST)
         data.u_hist(:, t_idx) = u;
         data.uSat_hist(:, t_idx) = u_sat;
         data.th_hist(:, t_idx) = nnWeightNorm(nn.th, opt);
-        data.r_hist(:, t_idx) = r;
         if CTRL_INFO.CTRL_NUM == 1
             data.lbd_hist(:, t_idx) = opt.lbd;
         elseif CTRL_INFO.CTRL_NUM == 2 || CTRL_INFO.CTRL_NUM == 3
             data.zeta_hist(:, t_idx) = z;
         end
-
-% cpx_list(t_idx) = cpx_;
-% bsc_hist(:,t_idx) =BSC_e2;
-% bsc_hist(:,t_idx) = u_fix;
 
         % simulation report
         if rem(t(t_idx)/dt, rpt_dt/dt) == 0
@@ -173,8 +170,8 @@ for ctrl_idx = 1:1:length(CTRL_LIST)
 
 end
 
-% if SAVE_RESULT_FLAG
-%     save("RESULT.mat", "dataSet", "-v7.3");
-% end
+if SAVE_RESULT_FLAG
+    save("RESULT.mat", "dataSet", "-v7.3");
+end
 
-% plotter
+plotter
