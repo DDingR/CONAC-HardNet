@@ -1,0 +1,74 @@
+\documentclass[10pt]{report}
+
+\def\pub{false} % true for publication, false for draft
+\newcommand*{\template}{../template}
+\input{\template/preamble/preamble_review.tex}
+
+\usepackage{svg}
+
+\titlepic{%
+  \includegraphics[height = 8mm]{\template/figs/logo_KAIST_simple.png}
+  \hspace{5mm}
+  \includegraphics[height = 8mm]{\template/figs/logo_MIT.png}
+}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% TITLE AND AUTHOR
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\title{
+  Proposal for Integration of Constrained Optimization-Based Neuro-Adaptive Control (CONAC) and HardNet++
+}
+
+\author{
+    Myeongseok Ryu
+    \thanks{Myeongseok Ryu is with the CCS Graduate School of Mobility, Korea Advanced Institute of Science and Technology, 23051 Daejeon, Republic of Korea {\tt\small dding\_98@kaist.ac.kr}}%
+    ,
+    Naol Samuel Erega
+    \thanks{
+    Naol Samuel Erega is with the CCS Graduate School of Mobility, Korea Advanced Institute of Science and Technology, 23051 Daejeon, Republic of Korea {\tt\small samuelnaol7@kaist.ac.kr}}%
+    , and 
+    Kyunghwan Choi
+    \thanks{Kyunghwan Choi is with the CCS Graduate School of Mobility, Korea Advanced Institute of Science and Technology, 23051 Daejeon, Republic of Korea {\tt\small kh.choi@kaist.ac.kr}}%
+}
+
+\date{
+    % 20\textsuperscript{th} March 2025
+    Complied on \today
+    \\
+    \textit{
+        Version 0.0
+    }
+}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+    In this document, I review the literature related to my research topic.
+    % We only take a very small step towards the solution, which can be interpreted as truth in real world represented in physics.
+    % Therefore, we can say, reviewing the literature is important to find a room for improvement and integrate the previous works.
+\end{abstract}
+
+\tableofcontents
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% CHAPTERS
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\input{chapters/introduction.tex}
+\input{chapters/method.tex}
+\input{chapters/conclusion.tex}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% APPENDIX
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \begin{appendices}
+%     \input{chapters/Appendix.tex}
+% \end{appendices}
+
+\addcontentsline{toc}{chapter}{Bibliography}
+% \bibliographystyle{IEEEtran}
+\bibliographystyle{apalike}
+\bibliography{localRefs}
+
+\end{document}

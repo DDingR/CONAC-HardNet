@@ -1,0 +1,64 @@
+
+\chapter{Useful Definitions and Lemmas}
+
+\section{Mathematical Preliminaries}
+
+\begin{lem}[Rayleigh–Ritz Theorem {\cite[page 425, Lemma 8.4.3]{Bernstein:2009aa}}]
+    Let $\mm{A} \in \R^{n \times n}$ be Hermitian matrix with eigenvalues $\lambda_1 \leq \lambda_2 \leq \cdots \leq \lambda_n$.
+    Then, for any nonzero vector $\mv{x} \in \R^n$, the following inequalities hold:
+    \begin{equation}
+        \lambda_1 \leq \frac{\mv{x}^\top \mm{A} \mv{x}}{\mv{x}^\top \mv{x}} \leq \lambda_n
+        .
+    \end{equation}
+\end{lem}
+
+\begin{lem}[{\cite[Lemma 3]{Chen:2011aa}}]
+    \label{appx:lem:spectral:radius}
+    Considering a matrix $\mm{B}\in\R^{m\times m}$ with spectral radius $\rho(\mm{B})$, there exists a positive constant $\delta\in\R_{>0}$ which makes matrix $\mm{B}+(\rho(\mm{B})+\delta)\mm{I}$ nonsingular.
+\end{lem}
+
+\section{Control Theoretic Preliminaries}
+
+\begin{definition}[Forward Invariant {\cite[Def. 1]{Xiao:2019aa}}] \label{appx:def:forward:invariant}
+    A set $\mathcal{C} \subset \mathbb{R}^n$ is said to be forward invariant for the system \eqref{eq:sys:dyn} if, for every initial condition $\mv{x}(0) \in \mathcal{C}$, the solution $\mv{x}(t)$ satisfies $\mv{x}(t) \in \mathcal{C}$ for all $t \ge 0$, where 
+    \begin{equation}
+        \mathcal{C} := 
+        \left\{
+            \mv{x} \in \mathcal{X} : h(\mv{x}) \le 0
+        \right\}
+        .
+    \end{equation}
+\end{definition}
+
+\begin{lem}[Comparison Lemma {\cite[pp. 102--103, Lemma 3.4]{Khalil:2002aa}}] \label{appx:lem:comparison}
+    Consider a scalar differential equation of the form
+    \begin{equation}
+        \dot{u}(t) = f(t,u(t)), \quad u(t_0) = u_0
+        ,
+    \end{equation}
+    where $f(t,u)$ is continuous in $t$ and locally Lipschitz in $u$. 
+    Let the maximal solution of the above equation be defined on the interval $[t_0, t_{\max})$. 
+    If a continuous function $v(t)$ satisfies 
+    \begin{equation}
+        \dot{v}(t) \leq f(t,v(t)), \quad v(t_0) \leq u_0
+        ,
+    \end{equation}
+    then $v(t) \leq u(t)$ for all $t \in [t_0, t_{\max})$.
+\end{lem}
+
+\begin{proof}
+    See \cite[pp. 689--660]{Khalil:2002aa}.
+\end{proof}
+
+This lemma is useful to conclude the upper bound of a time derivative of Lyapunov function in form of $\ddtt V(t) \le -a V(t) + b$, which leads to $V(t) \le \frac{b}{a} + (V(0) - \frac{b}{a}) \exp(-at)$, where $a,b \in \R_{>0}$ are bounded constants.
+
+\begin{definition}[Class $\mathcal{K}$ Function {\cite[pp. 144, Definition 4.2]{Khalil:2002aa}}] \label{appx:def:class:K}
+    A continuous function $\alpha: [0,a) \rightarrow [0,\infty)$ is said to belong to class $\mathcal{K}$ if it is strictly increasing and $\alpha(0) = 0$.
+    It is said to belong to class $\mathcal{K}_\infty$ if $a = \infty$ and $\lim_{r \rightarrow \infty} \alpha(r) = \infty$.
+\end{definition}
+
+\begin{definition}[Class $\mathcal{KL}$ Function {\cite[pp. 144, Definition 4.3]{Khalil:2002aa}}] \label{appx:def:class:KL}
+    A continuous function $\beta: [0,a) \times [0,\infty) \rightarrow [0,\infty)$ is said to belong to class $\mathcal{KL}$ if, for each fixed $t$, the mapping $\beta(\cdot,t)$ belongs to class $\mathcal{K}$, and for each fixed $s$, the mapping $\beta(s,\cdot)$ is decreasing and $\lim_{t \rightarrow \infty} \beta(s,t) = 0$, \ie belongs to class $\mathcal{L}$ with respect to $t$.
+\end{definition}
+
+
