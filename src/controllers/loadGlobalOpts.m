@@ -38,7 +38,7 @@ function opt = loadGlobalOpts(dt, CONTROL_NUM, OPT_NUM)
         opt.beta(1:3) = [1 1 1] * 0e0; % NN weight constraints
         opt.beta(4) = 1e2;              % control input ball
         opt.beta(5) = 0e2;              % control input 1 Max
-        opt.beta(6) = 1e3;              % control input 2 Max
+        opt.beta(6) = 1e4;              % control input 2 Max
         opt.beta(7) = opt.beta(5);      % control input 1 Min
         opt.beta(8) = opt.beta(6);      % control input 2 Min
         % opt.beta = opt.beta/opt.alpha;
@@ -77,19 +77,19 @@ function opt = loadGlobalOpts(dt, CONTROL_NUM, OPT_NUM)
     opt.th_size = sum(opt.th_size_list);        % total weight number
 
     %% OPTIONAL: OVERWRITE OPT WITH VAR_OPTS
-    % switch CONTROL_NUM
-    %     case 1
-    %         % CoNAC
-    %         switch OPT_NUM
-    %             case 1
-    %                 opt.beta(4) = opt.beta(4) * 100;
-    %                 opt.beta(6) = opt.beta(6) * 100;
-    %                 opt.beta(8) = opt.beta(8) * 100;
-    %             case 2
-    %             case 3
-    %                 opt.beta(4:end) = 0;
+    switch CONTROL_NUM
+        case 1
+            % CoNAC
+            switch OPT_NUM
+                % case 1
+                %     opt.beta(4) = opt.beta(4) * 100;
+                %     opt.beta(6) = opt.beta(6) * 100;
+                %     opt.beta(8) = opt.beta(8) * 100;
+                % case 2
+                case 3
+                    opt.beta(4:end) = 0;
             
-    % end
+    end
 
 
 end

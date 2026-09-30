@@ -200,8 +200,8 @@ nn.drdy = D*J;
 nn.r = r_ori;
 nn.uncon_y = in;
 
-if max(nn.proj_grad_singular_values) < 1e-1
-    warning('nnHNproj:grad_singular_values', ...
-        'Singular values of grad_HNproj are too small.');
-end
+% if max(nn.proj_grad_singular_values) < 1e-1
+%     warning('nnHNproj:grad_singular_values', ...
+%         'Singular values of grad_HNproj are too small.');
+% end
 end

@@ -32,6 +32,7 @@ function [nn, opt] = nnBackward(nn, opt, e, u_NN)
     lbd_grad = diag(opt.beta) * c;
 
     th_grad = th_grad + - opt.alpha * (nn.drdy*nnGrad)'*nn.r;
+    % th_grad = - opt.alpha * (nn.drdy*nnGrad)'*nn.r;
     
     th_grad = th_grad * opt.dt;
     lbd_grad = lbd_grad * opt.dt;

@@ -1,0 +1,965 @@
+\newcommand{\zoomStartTime}{24.6}
+\newcommand{\zoomEndTime}{25.3}
+\newcommand{\resultFig}{figs/CONAC_figs}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% CHAPTER: HardNet++ on Neuro-Adaptive Control
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\chapter{Hard-CONAC: Integration of HardNet++ and CONAC}
+\label{CONAC:chap:hard:CONAC}
+
+This chapter introduces the proposed Hard-Constrained Optimization-Based Neuro-Adaptive Control (Hard-CONAC) architecture, which integrates the HardNet++ framework with the CONAC approach.
+Using the HardNet++ framework, the proposed Hard-CONAC architecture can handle hard constraints on the control input, which is a significant improvement over the original CONAC approach that only considers soft constraints.
+
+The remainder of this chapter formulates the control problem in Section~\ref{CONAC:sec:problem:formulation}, introduces the DNN with a differentiable projection layer in Section~\ref{CONAC:sec:DNN:arch}, develops Hard-CONAC and its adaptation laws in Section~\ref{CONAC:sec:proposed:method}, analyzes its stability in Section~\ref{CONAC:sec:stability:analysis}, validates its performance in Section~\ref{CONAC:sec:validation}, and concludes in Section~\ref{CONAC:sec:conclusion}.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% PROBLEM FORMULATION
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Problem Formulation}
+\label{CONAC:sec:problem:formulation}
+
+Consider a nonlinear system with the following dynamics:
+\begin{equation}
+  \label{CONAC:eq:sys}
+  \ddtt\mv{x}
+  =
+  \mv{f}(\mv{x})
+  +
+  \mm{B}(\mv{x})
+  \mysat
+  \left(
+    \mv{u}
+  \right)
+  ,
+\end{equation}
+where $\mv{x} \in \R^{n}$ is the state vector, $\mv{u} \in \R^{m}$ is the control input, $\mv{f}:\R^n\to\R^m$ is an unknown system function, $\mm{B}:\R^n\to\R^{n\times m}$ is a unknown control effective matrix, and $\mysat(\cdot)$ represents the saturation function.
+
+The system is subject to the following assumptions:
+
+\begin{assum} 
+  \label{CONAC:assum:B:bound}
+  The control effectiveness matrix $\mm{B}(\mv{x})$ is nonsingular and bounded as   
+  $
+    \underline{b}\mm{I}_n
+    \preceq 
+    \mm{B}(\mv{x})
+    \preceq 
+    \bar{b}\mm{I}_n
+    ,
+  $
+  where $\underline{b},\bar{b}\in\R_{>0}$ are unknown positive constants.
+\end{assum}
+\begin{assum}[{\cite[Assump. 1(b)]{Boulkroune:2010aa}}] 
+  \label{CONAC:assum:B:bound:grad}
+  There exists an unknown positive function $\rho_{\beta}(\mv{x}):\R^n\to\R_{>0}$ such that $\tfrac{1}{2}\mv{v}^\top\left(\ddtt\mm{B}(\mv{x})^{-1}\right)\mv{v} \le \rho_{\beta}(\mv{x})\norm{\mv{v}}^2$, $\forall \mv{v}\in\R^n$, and $\forall \mv{x}\in\R^n$. 
+\end{assum}
+
+The saturation function $\mysat(\cdot)$ may be chosen arbitrarily, provided that it maps the unconstrained input $\mv{u}$ into the admissible input set $\Omega_u\subset\R^n$.
+The admissible input set is defined as follows:
+\begin{equation}
+  \label{CONAC:eq:adm:input:set}
+  \Omega_u
+  =
+  \left\{
+    \mv{u}\in\R^n
+    \mid
+    \underline{\mv{b}}
+    \leq
+    \mv{c}(\mv{u})
+    \leq
+    \overline{\mv{b}}
+  \right\}
+  ,
+\end{equation}
+where $c(\mv{u})$ is a constrained function vector and $\underline{b},\overline{b}\in\R^n$ are the lower and upper bounds of the constraints, respectively.
+
+\par\medskip
+
+Additionally, the desired trajectory $\mv{x}_d(t):\R_{\ge0}\to\R^n$ is assumed to be given and satisfies the following assumption.
+
+\begin{assum} 
+  \label{CONAC:assum:xd}
+  The desired trajectory $\mv{x}_d:=\mv{x}_d(t)$ is sufficiently smooth, and $\mv{x}_d$ and $\ddtt\mv{x}_d$ are bounded.
+\end{assum}
+
+The control objective is to design a NAC for the unknown system \eqref{CONAC:eq:sys} such that $\mv{x}$ tracks the desired trajectory $\mv{x}_d$, the multiple convex input constraints defined by $\mysat(\cdot)$ are satisfied, and closed-loop stability is guaranteed.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% DNN ARCHITECTURE WITH DIFFERENTIABLE PROJECTION LAYER
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{DNN Architecture with Differentiable Projection Layer (DPL)}
+\label{CONAC:sec:DNN:arch}
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.99\linewidth]
+  {
+    figs/general_figs/ConstrainedDNN.drawio.pdf
+  }
+  \caption{
+    Example illustration of the Hard-CONAC architecture whose node numbers of the hidden layers are all set to $3$ and the size of input and output are both $2$.
+  }
+  \label{CONAC:fig:hard:CONAC:arch}
+\end{figure}
+
+We first present the architecture of the DNN which is used in the proposed Hard-CONAC.
+The architecture of the proposed Hard-CONAC is illustrated in Fig.~\ref{CONAC:fig:hard:CONAC:arch}.
+As shown in the figure, the output of the unconstrained DNN is projected onto the feasible set defined by the constraints using the differentiable projection layer (DPL).
+
+The unconstrained DNN $\NN_u(\NNin;\wth)$ is parameterized by the weight vector $\wth\in\R^{\Xi}$ and the input vector $\NNin\in\R^{l_0+1}$, where $l_0$ is the number of input nodes and $\Xi$ is the total number of weights in the DNN.
+Specifically, the unconstrained DNN $\NN_u$ is recursively defined as follows:
+\begin{equation}
+  \label{CONAC:eq:DNN:uncon}
+  \NN_i
+  =
+  \begin{cases}
+    \wV_i^\top\act_i
+    ,
+    & 
+    i \in \{1,\ldots,L\}
+    \\
+    \wV_0^\top\NNin
+    ,
+    &
+    i = 0
+    ,
+  \end{cases}
+\end{equation}
+where $\wV_i\in\R^{l_{i}+1}\times l_{i+1}$ is the weight matrix of the $i$-th layer, and $\act_i\in\R^{l_{i}+1}$ is the activation vector of the $i$-th layer.
+By adopting the differentiable projection layer (DPL) from HardNet++ proposed in \cite{Goertzen:2026aa}, the constrained DNN $\NN$ is defined as follows:
+\begin{equation}
+  \label{CONAC:eq:DNN:con}
+  \NN
+  =
+  \Pi(\NN_u)
+  ,
+\end{equation}
+where $\Pi:\R^{l_{L+1}}\to\R^{l_{L+1}}$ is the projection operator that projects the unconstrained DNN output $\NN_u$ onto the feasible set defined by the constraints.
+The constraints are defined as follows:
+\begin{equation}
+  \label{CONAC:eq:cstr}
+  \underline{\mv{b}}
+  \leq
+  \mv{c}(\NN_u)
+  \leq
+  \overline{\mv{b}}
+  ,
+\end{equation}
+where $\mv{c},\underline{\mv{b}},\overline{\mv{b}}$ coincide with those in \eqref{CONAC:eq:adm:input:set} without their arguments for brevity.
+
+The projection operator $\Pi(\NN_u)$ corrects $\NN_u$ to satisfy the constraints in \eqref{CONAC:eq:cstr} by minimizing the residual of the constraints, which is defined as follows:
+\begin{equation}
+  \label{CONAC:eq:proj:residual}
+  \mv{r}(\NN_u) 
+  = 
+  \myReLU
+  \left(
+    \mv{c}(\NN_u) - \overline{\mv{b}}
+  \right)
+  +
+  \myReLU
+  \left(
+    \underline{\mv{b}} - \mv{c}(\NN_u)
+  \right)
+  ,
+\end{equation}
+where $\mv{r}:=\mv{r}(\NN_u)$ is the residual of the constraints, and $\myReLU(\cdot):=\max(0, \cdot)$ is the rectified linear unit function.
+
+\begin{algorithm}[!t]
+  \caption{Differentiable Projection Layer (DPL)}
+  \label{CONAC:alg:proj}
+  \begin{algorithmic}[1]
+    \STATE \textbf{Input:}
+    Unconstrained DNN output $\NN_u$, lower and upper bounds $\mv{b}_{\ell}$ and $\mv{b}_{u}$, maximum number of iterations $K$, damping matrix $\mm{E}\succ\mm{0}$, and tolerance $\varepsilon_{\mathrm{tol}}$
+
+    \STATE \textbf{Initialize:}
+    $\mv{y}^{(0)}\leftarrow\NN_u$
+
+    \FOR{$k=0$ to $K-1$}
+      \STATE Evaluate the constraint function
+      \[
+        \mv{c}^{(k)}
+        \leftarrow
+        \mv{c}\bigl(\mv{y}^{(k)}\bigr)
+      \]
+
+      \STATE Compute the constraint residual
+      \[
+        \mv{r}^{(k)}
+        \leftarrow
+        \myReLU
+        \left(\mv{c}^{(k)}-\overline{\mv{b}}\right)
+        -
+        \myReLU
+        \left(\underline{\mv{b}}-\mv{c}^{(k)}\right)
+      \]
+
+      \IF{$\|\mv{r}^{(k)}\|_{\infty}
+              \leq\varepsilon_{\mathrm{tol}}$}
+        \STATE \textbf{break}
+      \ENDIF
+
+      \STATE Compute the constraint Jacobian
+      \[
+        \mm{J}^{(k)}
+        \leftarrow
+        \left.
+        \frac{\partial\mv{c}(\mv{y})}
+            {\partial\mv{y}}
+        \right|_{\mv{y}=\mv{y}^{(k)}}
+      \]
+
+      \STATE Compute the damped correction
+      \[
+        \Delta\mv{y}^{(k)}
+        \leftarrow
+        -{\mm{J}^{(k)}}^{\top}
+        \left(
+          \mm{J}^{(k)}{\mm{J}^{(k)}}^{\top}
+          +\mm{E}
+        \right)^{-1}
+        \mv{r}^{(k)}
+      \]
+
+      \STATE Update the projected variable
+      \[
+        \mv{y}^{(k+1)}
+        \leftarrow
+        \mv{y}^{(k)}+\Delta\mv{y}^{(k)}
+      \]
+    \ENDFOR
+
+    \STATE \textbf{Output:}
+    \[
+      \Pi(\NN_u)
+      \leftarrow
+      \mv{y}^{(K)}
+    \]
+  \end{algorithmic}
+\end{algorithm}
+
+\par\medskip
+
+The projection operator $\Pi(\NN_u)$ iteratively linearize the constraint function $\mv{c}$ and projects the input onto the feasible set defined by the linearized constraints.
+For better intuition, the algorithm of the projection operator $\Pi(\cdot)$ is summarized in Algorithm~\ref{CONAC:alg:proj}.
+
+When the unconstrained DNN output $\NN_c$ violates any constraint, the DPL initializes $\mv{y}^{(0)}=\NN_c$ and constructs a linearized projection step by locally approximating the constraint functions.
+For instance, at step $k$, the linearized constraints are constructed at $\mv{y}^{(k)}$, as follows:
+\begin{equation}
+  \underline{\mv{b}}
+  \le
+  c(\mv{y}^{(k)}) + \mm{J}^{(k)}(\mv{y}^{(k+1)}-\mv{y}^{(k)})
+  \le
+  \overline{\mv{b}}
+  ,
+\end{equation}
+where $\mm{J}^{(k)}$ is the Jacobian of the constraint function evaluated at $\mv{y}^{(k)}$.
+Invoking the linearized constraints, HardNet-Aff presented in \cite{Min:2025aa} 
+\cred{
+  Need to be added!
+}
+
+Then, by adding a damping term $\mm{E}=\mm{E}^\top\succ\mm{0}$, the projection step is computed as follows:
+\begin{equation}
+  \label{CONAC:eq:proj:step}
+  \mv{y}^{(k+1)}
+  =
+  \mv{y}^{(k)}
+  -
+  {\mm{J}^{(k)}}^{\top}
+  \left(
+    \mm{J}^{(k)}{\mm{J}^{(k)}}^{\top}
+    +\mm{E}
+  \right)^{-1}
+  \mv{r}^{(k)}
+  .
+\end{equation}
+Finally, when the infinite norm of the constraint residual $\mv{r}^{(k)}$ is less than a specified tolerance $\varepsilon_{\mathrm{tol}\in\R_{>0}}$, the DPL terminates the iteration and outputs the projected variable $\mv{y}^{(K)}$ as the final output of the projection operator $\Pi(\NN_u)$.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% PROPOSED METHOD
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Proposed Method}
+\label{CONAC:sec:proposed:method}
+
+\begin{figure}[t]
+  \centering
+  % \fbox{
+  %   \begin{minipage}[c][0.2\textheight][c]{0.95\linewidth}
+  %     \centering
+  %     \textbf{Will be updated}
+  %   \end{minipage}
+  % } 
+  \includegraphics[width=0.8\linewidth]
+  {
+    figs/general_figs/HardCONAC.drawio.pdf
+  }
+  \caption{
+  Overall architecture of the proposed Hard-CONAC.
+  }
+  \label{CONAC:fig:proposed:arch}
+\end{figure}
+
+
+In this section, we present the proposed Hard-CONAC architecture, which integrates the HardNet++ framework with the CONAC approach.
+The overall architecture of the proposed Hard-CONAC is illustrated in Fig.~\ref{CONAC:fig:proposed:arch}.
+
+% —————————————————————————————————————————————————————
+% PROPOSED METHOD: NAC formulation
+% —————————————————————————————————————————————————————
+\subsection{Neuro-Adaptive Control Formulation}
+
+In this section, the NAC formulation is presented.
+First, the error dynamics $\mv{e}:=\mv{x}-\mv{x}_d$ is defined, and the error dynamics is rewritten as follows:
+\begin{equation}
+  \label{CONAC:eq:err:dyn}
+  \ddtt\mv{e}
+  =
+  \mv{f}(\mv{x}) + \mm{B}(\mv{x})\mysat(\mv{u}) - \ddtt\mv{x}_d
+  .
+\end{equation}
+
+Then, consider the following Lyapunov function candidate:
+\begin{equation}
+  \label{CONAC:eq:Vc}
+  V_c = \tfrac{1}{2}\mv{e}^\top\mm{B}^{-1}(\mv{x})\mv{e}
+  .
+\end{equation}
+Invoking Assumptions~\ref{CONAC:assum:B:bound:grad}, the time derivative of $V_c$ can be bounded as follows:
+\begin{align} \label{CONAC:eq:Vc:dot:1} \nonumber
+  \ddtt V_c
+  =&
+  \tfrac{1}{2}\mv{e}^\top
+  \left(
+    \ddtt\mm{B}^{-1}
+  \right)
+  \mv{e}
+  +
+  \mv{e}^\top\mm{B}^{-1}
+  \left(
+    \mv{f} + \mm{B}\mysat(\mv{u}) 
+    - \ddtt\mv{x}_d
+  \right)
+  \\
+  \le&
+  \rho_{\beta}(\mv{x})
+  \norm{\mv{e}}^2
+  +
+  \mv{e}^\top\mv{u}
+  +
+  \mv{e}^\top\mm{B}^{-1}
+  \left(
+    \mv{f}- \ddtt\mv{x}_d
+  \right)
+  +
+  \mv{e}^\top
+  \Delta\mv{u}
+  ,
+\end{align}
+where the arguments of $\mv{f}(\mv{x})$ and $\mm{B}(\mv{x})$ are omitted for brevity and $\Delta\mv{u} := \mysat(\mv{u}) - \mv{u}$.
+
+Notably, as shown in the previous section, the proposed Hard-CONAC architecture ensures that the control input $\mv{u}$ always satisfies the input constraints, resulting in 
+\begin{equation}
+  \Delta\mv{u} = \mv{0}
+  .
+\end{equation}
+Therefore, the time derivative of the Lyapunov function candidate $V_c$ can be further simplified as follows:
+\begin{equation} \label{CONAC:eq:Vc:dot:2}
+  \ddtt V_c
+  \le
+  \rho_{\beta}(\mv{x}) + \mv{e}^\top \mv{u}
+  +
+  \mv{e}^\top\mm{B}^{-1}
+  \left(
+    \mv{f}- \ddtt\mv{x}_d
+  \right)
+  .
+\end{equation}
+
+A desired control law $\mv{u}_d$ such that the tracking error $\mv{e}$ is stable in the absence of input saturation is selected as 
+\begin{equation} \label{eq:ctrl:ideal}
+  \mv{u}_d
+  :=
+  -
+  \mm{P}
+  \mv{e}
+  - 
+  \rho_{\beta}(\mv{x})
+  \mv{e}
+  +
+  \mm{B}^{-1}
+  \left(
+    - \mv{f} 
+    + \ddtt\mv{x}_d
+  \right)
+  % +
+  % h(\mv{x},\mv{x}_d)
+  ,
+\end{equation}
+where $\underline{p}\mm{I}_n \preceq \mm{P}=\mm{P}^\top \preceq \overline{p}\mm{I}_n$ for known positive constants $\underline{p},\overline{p}\in\R_{>0}$.
+% The function $h:\R^n\times\R^n\to\R^n$ is correction term to satisfy the ideal control law $\mv{u}^*$ within the input constraints, \ie $\mv{u}^*\in\Omega_u$.
+
+By substituting $\mv{u}_d$ in \eqref{eq:ctrl:ideal} into \eqref{CONAC:eq:Vc:dot:3}, we have
+\begin{align} \label{CONAC:eq:Vc:dot:3} 
+  \ddtt V_c
+  \le &
+  -\mv{e}^\top
+  \mm{P}
+  \mv{e}
+  +
+  \mv{e}^\top
+  \left(
+    \mv{u} - \mv{u}_d
+  \right)
+  \\ \nonumber
+  \le & 
+  -
+  \underline{p}\norm{\mv{e}}^2
+  +
+  \mv{e}^\top
+  \left(
+    \mv{u} - \mv{u}_d       
+  \right)
+  .
+\end{align}
+Notably, in the ideal case, \ie $\mv{u} = \mv{u}_d$, the tracking error $\mv{e}$ asymptotically converges to zero with decay rate $\underline{p}\overline{b}$, since 
+$
+  \tfrac{1}{\overline{b}}
+  \ddtt
+  \left(
+    \norm{\mv{e}}^2
+  \right)
+  \le
+  \ddtt V_c 
+  \le 
+  -\underline{p}\norm{\mv{e}}^2
+$.
+
+Since the ideal control input $\mv{u}_d$ is unknown due to the unknown system dynamics, we approximate $\mv{u}_d$ using the DNN architecture with the DPL which is defined in the previous section, as follows:
+\begin{equation}
+  \label{CONAC:eq:ctrl:ideal}
+  \mv{u}_d
+  =
+  \NN(\NNin;\idealwth)
+  +
+  \mv{\epsilon}
+  ,
+\end{equation}
+where $\idealwth\in\R^{\Xi}$ is the ideal weight vector, and $\mv{\epsilon}\in\R^n$ is the approximation error of the DNN.
+The ideal weight vector and the approximation error are bounded for a compact set $\Omega_{\NNin}\subset\R^{l_0+1}$ which is also known as the approximation region, as follows:
+\begin{equation}
+  \norm{\idealwth} 
+  \le 
+  \overline{\theta}
+  , 
+  \qquad 
+  \norm{\mv{\epsilon}} 
+  \le 
+  \overline{\epsilon}
+  , 
+  \qquad 
+  \forall 
+  \NNin\in\Omega_{\NNin}
+  ,
+\end{equation}
+where $\overline{\theta},\overline{\epsilon}\in\R_{>0}$ are unknown positive constants.
+
+As the ideal weight vector $\idealwth$ is unknown, we estimate it using the weight vector $\estwth\in\R^{\Xi}$, which is updated online using the adaptation law derived in the subsequent section.
+The actual control input $\mv{u}$ is then defined as follows:
+\begin{equation}
+  \label{CONAC:eq:ctrl:actual}
+  \mv{u}
+  =
+  \NN(\NNin;\estwth)
+  =
+  \Pi\left(\NN_u(\NNin;\estwth)\right)
+  .
+\end{equation}
+
+By substituting \eqref{CONAC:eq:ctrl:ideal} and \eqref{CONAC:eq:ctrl:actual} into \eqref{CONAC:eq:Vc:dot:3}, we have
+\begin{align} \label{CONAC:eq:Vc:dot:4}
+  \ddtt V_c
+  \le &
+  -\underline{p}\norm{\mv{e}}^2
+  +
+  \mv{e}^\top
+  \left(
+    \NN(\NNin;\estwth)
+    -
+    \NN(\NNin;\idealwth)
+    -
+    \mv{\epsilon}
+  \right)
+  \\ \nonumber
+  \le &
+  -\underline{p}\norm{\mv{e}}^2
+  +
+  \mv{e}^\top
+  \pptfrac{\estNN}{\estwth}\tilde{\wth}
+  +
+  \mv{e}^\top
+  \underbrace{
+  \mathcal{O}\left(\norm{\tilde\wth}\right)
+  +
+  \mv{\epsilon}
+  }_{=:\mv{\Delta}}
+  ,
+\end{align}
+where $\tilde{\wth}:=\estwth-\idealwth$ is the weight estimation error, and $\pptfrac{\estNN}{\estwth}$ is the Jacobian of the constrained DNN with respect to the weight vector $\estwth$.
+The high-order term is denoted by $\mathcal{O}(\norm{\tilde\wth})$ and is bounded only if $\norm{\tilde\wth}$ is bounded.
+The term $\mv{\Delta}$ includes the high-order term and the approximation error.
+
+% —————————————————————————————————————————————————————
+% PROPOSED METHOD: Adaptation law derivation
+% —————————————————————————————————————————————————————
+\subsection{Adaptation Law Derivation}
+
+The constrained control problem stated in Section~\ref{CONAC:sec:problem:formulation} can be formulated as a constrained optimization problem, which is defined as follows:
+\begin{subequations} 
+  \label{CONAC:eq:opt:prob} 
+  \begin{align} 
+    \min_{\estwth} \quad 
+    & 
+    J(\mv{e};\estwth)
+    = 
+    \tfrac{1}{2} \mv{e}^\top \mv{e} 
+    +
+    \tfrac{1}{2} \mv{r}^\top \mv{r}
+    \label{CONAC:eq:opt:prob:obj} 
+    \\ 
+    \text{subject to} \quad  
+    & 
+    c^{\theta}_i(\estwth_i)=\tfrac{1}{2}
+    \left(
+      \norm{\estwth_i}^2
+      -
+      \overline{\theta}_i^2 
+    \right)
+    \le 0, 
+    \qquad
+    \forall i\in\{0,1,\ldots,L\}
+    ,
+    \label{CONAC:eq:opt:prob:const1} 
+    \\ 
+    & 
+    \underline{\mv{b}}(\NNin)
+    \leq
+    \mv{c}^u(\NN)
+    \leq
+    \overline{\mv{b}}(\NNin)
+    ,
+    \label{CONAC:eq:opt:prob:const2} 
+  \end{align}%
+\end{subequations}
+where $J(\mv{e};\estwth)$ is the objective function, and $c^{\theta}_i(\estwth_i)$ is the constraint function for the weight vector $\estwth_i$ of the $i$-th layer.
+
+The objective function includes the instantaneous tracking error $\mv{e}$ and the constraint residual $\mv{r}$, which is defined in \eqref{CONAC:eq:proj:residual}.
+
+\cred{...}
+
+The adaptation law for the adaptive variables, $\estwth$, and $[\lambda_i]_{j\in\{0,1,\ldots,L\}}$, is derived to solve \eqref{eq:opt:prob:saddle} by using a primal-dual gradient update law, as follows:
+\begin{subequations} 
+  \label{CONAC:eq:adap}
+  \begin{align}
+    \ddtt{\estwth}
+    &
+    = 
+    -\alpha \pptfrac{L}{\estwth}
+    =
+    -\alpha 
+    \left(
+      \pptfrac{J}{\estwth}
+      +
+      \textstyle\sum_{i=0}^L
+      \lambda_i 
+      \estwth_i
+    \right),
+    \label{CONAC:eq:adap:th}
+    \\
+    \ddtt\lambda_i
+    & 
+    = 
+    \myproj_{\lambda_i\ge0}
+    \left(
+      \beta_i
+      \pptfrac{L}{\lambda_i}
+    \right)
+    =
+    \myproj_{\lambda_i\ge0}
+    \left(
+      \beta_i
+      c^{\theta}_{i} 
+    \right)
+    ,
+    \qquad \forall i\in\{0,1,\ldots,L\},
+    \label{CONAC:eq:adap:lbd}
+  \end{align}%
+\end{subequations}
+
+% —————————————————————————————————————————————————————
+% PROPOSED METHOD: FORWARD-MODE AUTOMATIC DIFFERENTIATION
+% —————————————————————————————————————————————————————
+\subsubsection{Forward-Mode Automatic Differentiation for DPL}
+
+As shown in the previous section, it is not straightforward to compute the gradient of the constrained DNN $\NN$ with respect to its input, \ie the unconstrained DNN $\NN_u$, due to the projection operator $\Pi(\cdot)$.
+We adopt the forward-mode automatic differentiation technique \cite[Chap. 8.2]{Nocedal:2006aa} to compute the gradient of the each projection layers in the DPL.
+
+First, 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% STABILITY ANALYSIS
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Stability Analysis}
+\label{CONAC:sec:stability:analysis}
+
+In this section, the closed-loop stability under the proposed Hard-CONAC is analyzed.
+
+\begin{theorem} \label{thm:stability}
+  \cred{add theorem statement}
+  % Consider the closed-loop system consisting of \eqref{eq:sys}, the control law \eqref{eq:ctrl:NN:actual}, and the adaptation law \eqref{eq:adap}.
+  % Suppose that Assumptions~\ref{assum:B:bound}--\ref{assum:xd} hold and the initial condition belongs to the compact invariant set 
+  % $
+  % \prod_{\ell=0}^k \mathcal{S}_\ell(\overline V_\ell)
+  % $ 
+  % constructed in \eqref{eq:Sk:def} and \eqref{eq:Si:def}.
+  % Then, the tracking error $\mv e$, the DNN weights $\estwth$, and the Lagrange multipliers $\sigma_i,\ \forall i \in \mathcal{K},$ and $\lambda_j,\ \forall j \in \mathcal{I},$ are uniformly ultimately bounded.
+\end{theorem}
+
+\begin{proof}
+
+Consider the following Lyapunov function candidate:
+\begin{equation}
+  \label{CONAC:eq:V}
+  V
+  =
+  V_c
+  +
+  \tfrac{1}{2\alpha}\tilde{\wth}^\top\tilde{\wth}
+  +
+  \textstyle\sum_{i=0}^L
+  \tfrac{1}{\beta_i}
+  \left(
+    \lambda_i - \lambda_i^o
+  \right)^2
+  .
+\end{equation}
+Taking the time derivative of $V$ yields
+\begin{align} \label{CONAC:eq:V:dot:1}
+  \ddtt V
+  = &
+  -\underline{p}\norm{\mv{e}}^2
+  +
+  \mv{e}^\top
+  \left(
+    \pptfrac{\estNN}{\estwth}\tilde{\wth}
+    +
+    \mv{\Delta}
+  \right)
+  -
+  \tilde{\wth}^\top
+  \left(
+    \pptfrac{\estNN}{\estwth}^\top
+    \mv{e}
+    +
+    \left(
+      \mm{D}^{(0)}
+      \mm{J}^{(0)}
+      \pptfrac{\estNN_u}{\estwth}
+    \right)^\top
+    \mv{r}
+    +
+    \mydiag(\mv{\lambda})\estwth
+  \right)
+  +
+  \sum_{i=0}^L
+  \left(
+    \lambda_i - \lambda_i^o
+  \right)
+  \left(
+    \estwth_i^\top
+    \estwth_i
+    -
+    \overline{\theta}_i^2
+  \right)
+  \\
+  =
+  &
+  -\underline{p}\norm{\mv{e}}^2
+  +
+  \mv{e}^\top
+  \mv{\Delta}
+  -
+  \tilde{\wth}^\top
+  \left(
+    \mm{D}^{(0)}
+    \mm{J}^{(0)}
+    \pptfrac{\estNN_u}{\estwth}
+  \right)^\top
+  \mv{r}
+  +
+  \sum_{i=0}^L
+  \left(
+    -
+    \lambda_i
+    \tilde{\wth}^\top
+    \estwth
+    +
+    \left(
+      \lambda_i - \lambda_i^o 
+    \right)
+    \left(
+      \estwth_i^\top
+      \estwth_i
+      -
+      \overline{\theta}_i^2
+    \right)
+  \right)
+\end{align}
+
+
+\end{proof}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% VALIDATION
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Validation}
+\label{CONAC:sec:validation}
+
+
+
+\begin{table}[t]
+  \renewcommand{\arraystretch}{1.3}
+  \caption{Controllers and parameters used for comparative analysis.}
+  \label{table:controller}
+  \centering
+  % \begin{tabular}{m{.6cm} m{4cm} m{2.7cm}}
+  \begin{tabular}{m{.6cm} m{6cm} m{4.7cm}}
+  % \begin{tabular}{c l l}
+  \hline
+    &\bf{Description and parameters}&\bf{Input constraint}\\
+  \hline
+  \hline
+    \multirow{3}{*}{
+      \shortstack{
+        {(C$_1$)}
+        \\
+        \protect\colorLine{blue}{solid}
+      }
+    }& Hard-CONAC 
+    & 
+      \multirow{3}{*}{
+        \shortstack[l]{
+          $-\overline{\tau}_2 \le \tau_2 \le \overline{\tau}_2$, 
+          \\
+            $\norm{\mv{\tau}} \le \overline{\tau}$,
+          \\
+            ($\overline{\tau}_2=3.8, \overline{\tau}=11$)
+        }
+      }
+    \\
+    & $\epsilon=0 $ & 
+    \\
+    & 
+    $\overline{\theta}_i=15$
+    &
+    \\
+  \hline
+    \multirow{3}{*}{
+      \shortstack{
+        {(C$_2$)}
+        \\
+        \protect\colorLine{my_cyan}{solid}
+      }
+    }& CONAC &  
+    \\
+    & $\beta^{u}_{\overline{\tau}_2}=\beta^{u}_{\underline{\tau}_2}=1000$, $\beta^{u}_{\overline{\tau}}=100,$ & same as (C$_1$) 
+    \\
+    & 
+    $\overline{\theta}_i=15,\beta_i^\theta=1,\forall i\in\{0,1,2\}$,
+    &
+    \\
+  \hline
+    \multirow{2}{*}{
+    \shortstack{  
+      (C$_3$) 
+      \\
+      \protect\colorLine{gray}{solid}
+    }
+    }& NAC without input constraints& 
+    \multirow{2}{*}{not considered}
+    \\
+    & $\overline{\theta}=15$ \cite{Patil:2022aa} & 
+    \\  
+\hline
+\hline
+    \multicolumn{3}{m{12.1cm}}{
+      DNN and other parameters for all controllers:
+      $
+        \alpha=0.2
+        ,
+        \mm{P}=\mm{I}_2
+        ,
+      $
+    }
+    \\
+    \multicolumn{3}{m{12.1cm}}{
+      $
+        \NNin 
+        \!=\!
+        \left(
+          (\mv{q}-\mv{q}_d)^\top,
+          \ddtt(\mv{q}-\mv{q}_d)^\top,
+          \tfrac{\der^2}{\der t^2}\mv{q}_d^\top,
+          1
+        \right)^\top
+        ,
+        \mm{\Lambda} = \mydiag(6,13)
+        ,
+      $
+    }
+    \\
+    \multicolumn{3}{m{12.1cm}}{
+      $
+        l_0=6,l_1=4,l_2=4,l_3=2
+        ,
+        \estwth(0)\sim\mathcal{U}\bigl([-0.5,0.5]^{\Xi}\bigr)
+      $
+    }
+    \\
+\hline
+  \end{tabular}
+\end{table}
+
+\begin{figure*}[t]
+  \centering
+  \subfloat[Tracking performance of $1$st joint angle $q_1$.]{
+    \includegraphics[width=.49\linewidth]
+    {
+      \resultFig/Fig1.eps
+    }%
+    \label{fig:ctrl:result:general:q1}}
+  \hfill
+  \subfloat[Tracking performance of $2$nd joint angle $q_2$.]{
+    \includegraphics[width=.49\linewidth]
+    {
+      \resultFig/Fig2.eps
+    }%
+    \label{fig:ctrl:result:general:q2}}
+  \vfill
+  % \vfill
+  \subfloat[Commanded control input of the $1$st joint $\tau_1$.]{
+  \includegraphics[width=.49\linewidth]
+    {
+      \resultFig/Fig5.eps
+    }%
+    \label{fig:ctrl:result:general:tau:1}}
+  \hfill
+    \subfloat[Commanded control input of the 2nd joint $\tau_2$.]{
+    \includegraphics[width=.49\linewidth]
+    {
+      \resultFig/Fig6.eps
+    }%
+    \label{fig:ctrl:result:general:tau:2}}
+  \vfill
+  \subfloat[Norm of the commanded control input $\mv{\tau}$.]{
+    \includegraphics[width=.49\linewidth]
+    {
+      \resultFig/Fig7.eps
+    }%
+    \label{fig:ctrl:result:general:tau:norm}}
+  \hfill
+  % \vfill
+  \subfloat[Norm of DNN weights ${\estwth}_i$.]{
+    % \includegraphics
+    \includegraphics[width=.49\linewidth]
+    {
+      \resultFig/Fig10.eps
+    }%
+    \label{fig:ctrl:result:general:weight}}        
+  \caption{
+      Real-time implementation results of (C$_1$) \protect\colorLine{blue}{solid}, (C$_2$) \protect\colorLine{my_cyan}{solid}, (C$_3$) \protect\colorLine{gray}{solid}, and desired trajectory $\qd$ \protect\colorLine{red}{dashed}.
+      % \vspace{-5mm}
+  }
+\label{fig:ctrl:result:general}
+\end{figure*}
+
+
+
+
+
+
+\begin{figure*}[t]
+  \centering
+  \subfloat[Number of the linearized projection steps in the DPL.]{
+    \includegraphics[width=0.48\linewidth]
+    {
+      \resultFig/Fig11.eps
+    }
+    \label{fig:ctrl:result:detail:q:top:view}
+  }
+  \hfill
+  \subfloat[Convergence of the DPL.]{
+    \includegraphics[width=0.49\linewidth]
+    {
+      \resultFig/Fig13.eps
+    }
+    \label{fig:ctrl:result:detail:u:top:view}
+  }
+  \caption{  
+    Detail results of the control implementation of (C$_1$).
+  }
+  \label{fig:ctrl:result:detail}
+\end{figure*}
+
+
+\begin{figure*}[t]
+  \centering
+  \subfloat[Trajectory of the tracking error of each joint angle $\mv{q}$ during the time interval {$[\zoomStartTime, \qty{\zoomEndTime}{\second}]$}.]{
+    \includegraphics[width=0.48\linewidth]
+    {
+      \resultFig/Fig14.eps
+    }
+    \label{fig:ctrl:result:detail:q:top:view}
+  }
+  \hfill
+  \subfloat[Trajectory of the commanded control input $\mv{\tau}$ during the time interval {$[\zoomStartTime, \qty{\zoomEndTime}{\second}]$}.]{
+    \includegraphics[width=0.48\linewidth]
+    {
+      \resultFig/Fig8.eps
+    }
+    \label{fig:ctrl:result:detail:u:top:view}
+  }
+  \vfill
+  \subfloat[Number of the linearized projection steps in the DPL of (C$_1$) during the time interval {$[\zoomStartTime, \qty{\zoomEndTime}{\second}]$}.]{
+    \includegraphics[width=0.48\linewidth]
+    {
+      \resultFig/Fig12.eps
+    }
+    \label{fig:ctrl:result:detail:multipliers}
+  }
+  \hfill
+  \subfloat[Lagrange multiplier associated with the power source limit constraint for (C$_1$) during the time interval {$[\zoomStartTime, \qty{\zoomEndTime}{\second}]$}.]{
+    \includegraphics[width=0.48\linewidth]
+    {
+      \resultFig/Fig9.eps
+    }
+    \label{fig:ctrl:result:detail:multipliers}
+  }
+  \caption{  
+    Zoomed-in view of the tracking error, commanded control input, and
+Lagrange multiplier $\lambda_{\overline{\tau}}$ during the time interval
+$[\zoomStartTime, \qty{\zoomEndTime}{\second}]$ of (C$_1$) \protect\colorLine{blue}{solid}, (C$_2$) \protect\colorLine{my_cyan}{solid}, and (C$_3$) \protect\colorLine{gray}{solid}.
+  }
+  \label{fig:ctrl:result:detail}
+\end{figure*}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% CONCLUSION
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Conclusion}
+\label{CONAC:sec:conclusion}
+
+

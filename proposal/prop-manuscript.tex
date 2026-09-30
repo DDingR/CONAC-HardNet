@@ -1,3 +1,10 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%           VERSION RECORDS            
+%
+% Ver. 0.1 (2026-09-): Hard-CONAC draft started
+%   - 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 \documentclass[10pt]{report}
 
 \def\pub{false} % true for publication, false for draft
@@ -7,7 +14,7 @@
 \usepackage{svg}
 
 \titlepic{%
-  \includegraphics[height = 8mm]{\template/figs/logo_KAIST_simple.png}
+  \includegraphics[height = 8mm]{\template/figs/logo_KAIST.png}
   \hspace{5mm}
   \includegraphics[height = 8mm]{\template/figs/logo_MIT.png}
 }
@@ -16,28 +23,28 @@
 % TITLE AND AUTHOR
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \title{
-  Proposal for Integration of Constrained Optimization-Based Neuro-Adaptive Control (CONAC) and HardNet++
+  Proposal for Physics-Informed HardNet++
 }
 
 \author{
-    Myeongseok Ryu
-    \thanks{Myeongseok Ryu is with the CCS Graduate School of Mobility, Korea Advanced Institute of Science and Technology, 23051 Daejeon, Republic of Korea {\tt\small dding\_98@kaist.ac.kr}}%
-    ,
-    Naol Samuel Erega
-    \thanks{
-    Naol Samuel Erega is with the CCS Graduate School of Mobility, Korea Advanced Institute of Science and Technology, 23051 Daejeon, Republic of Korea {\tt\small samuelnaol7@kaist.ac.kr}}%
-    , and 
-    Kyunghwan Choi
-    \thanks{Kyunghwan Choi is with the CCS Graduate School of Mobility, Korea Advanced Institute of Science and Technology, 23051 Daejeon, Republic of Korea {\tt\small kh.choi@kaist.ac.kr}}%
+  Myeongseok Ryu
+  \thanks{Myeongseok Ryu is with the CCS Graduate School of Mobility, Korea Advanced Institute of Science and Technology, 23051 Daejeon, Republic of Korea {\tt\small dding\_98@kaist.ac.kr}}%
+  ,
+  Naol Samuel Erega
+  \thanks{
+  Naol Samuel Erega is with the CCS Graduate School of Mobility, Korea Advanced Institute of Science and Technology, 23051 Daejeon, Republic of Korea {\tt\small samuelnaol7@kaist.ac.kr}}%
+  , and 
+  Kyunghwan Choi
+  \thanks{Kyunghwan Choi is with the CCS Graduate School of Mobility, Korea Advanced Institute of Science and Technology, 23051 Daejeon, Republic of Korea {\tt\small kh.choi@kaist.ac.kr}}%
 }
 
 \date{
-    % 20\textsuperscript{th} March 2025
-    Complied on \today
-    \\
-    \textit{
-        Version 0.0
-    }
+  % 20\textsuperscript{th} March 2025
+  Compiled on \today
+  \\
+  \textit{
+    Version 0.1
+  }
 }
 
 \begin{document}
@@ -45,9 +52,12 @@
 \maketitle
 
 \begin{abstract}
-    In this document, I review the literature related to my research topic.
-    % We only take a very small step towards the solution, which can be interpreted as truth in real world represented in physics.
-    % Therefore, we can say, reviewing the literature is important to find a room for improvement and integrate the previous works.
+  This proposal presents a neural-network framework for enforcing hard constraints in the presence of uncertain constraint functions.
+  HardNet++ provides a systematic approach for constructing neural networks whose outputs satisfy prescribed hard constraints. 
+  However, its direct application requires the functions defining the constraints to be known.
+  To address constraints containing unknown functions, additional neural networks are introduced to estimate the unknown components and incorporate them into the constraint-enforcement architecture. The proposed approach will be investigated in both deep-learning and neuro-adaptive-control frameworks. 
+  In the latter, the constrained neural-network architecture is integrated with online adaptation to account for system uncertainty while maintaining admissible control inputs. 
+  Theoretical and numerical studies will be conducted to examine constraint satisfaction, approximation performance, and closed-loop behavior of the resulting framework.
 \end{abstract}
 
 \tableofcontents
@@ -56,7 +66,8 @@
 % CHAPTERS
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \input{chapters/introduction.tex}
-\input{chapters/method.tex}
+\input{chapters/Hard-CONAC.tex}
+\input{chapters/PhysicalHardNet.tex}
 \input{chapters/conclusion.tex}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -69,6 +80,6 @@
 \addcontentsline{toc}{chapter}{Bibliography}
 % \bibliographystyle{IEEEtran}
 \bibliographystyle{apalike}
-\bibliography{localRefs}
+\bibliography{../localRefs}
 
 \end{document}
