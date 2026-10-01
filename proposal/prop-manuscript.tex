@@ -1,7 +1,9 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %           VERSION RECORDS            
 %
-% Ver. 0.1 (2026-09-): Hard-CONAC draft started
+% Ver. 0.1 Hard-CONAC draft started
+%   - 
+% Ver. 0.2 Biography added
 %   - 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -23,19 +25,19 @@
 % TITLE AND AUTHOR
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \title{
-  Proposal for Physics-Informed HardNet++
+  Proposal for Adaptive Hard Constraint Enforcement in Neural Networks
 }
 
 \author{
   Myeongseok Ryu
-  \thanks{Myeongseok Ryu is with the CCS Graduate School of Mobility, Korea Advanced Institute of Science and Technology, 23051 Daejeon, Republic of Korea {\tt\small dding\_98@kaist.ac.kr}}%
+  % \thanks{Myeongseok Ryu is Ph.D. student in MIC Lab at the CCS Graduate School of Mobility, Korea Advanced Institute of Science and Technology, 23051 Daejeon, Republic of Korea {\tt\small dding\_98@kaist.ac.kr}}%
   ,
   Naol Samuel Erega
-  \thanks{
-  Naol Samuel Erega is with the CCS Graduate School of Mobility, Korea Advanced Institute of Science and Technology, 23051 Daejeon, Republic of Korea {\tt\small samuelnaol7@kaist.ac.kr}}%
+  % \thanks{
+  % Naol Samuel Erega is Master's student in MIC Lab at the CCS Graduate School of Mobility, Korea Advanced Institute of Science and Technology, 23051 Daejeon, Republic of Korea {\tt\small samuelnaol7@kaist.ac.kr}}%
   , and 
-  Kyunghwan Choi
-  \thanks{Kyunghwan Choi is with the CCS Graduate School of Mobility, Korea Advanced Institute of Science and Technology, 23051 Daejeon, Republic of Korea {\tt\small kh.choi@kaist.ac.kr}}%
+  Kyunghwan Choi$^\dagger$
+  % \thanks{Kyunghwan Choi is principal investigator in MIC Lab at the CCS Graduate School of Mobility, Korea Advanced Institute of Science and Technology, 23051 Daejeon, Republic of Korea {\tt\small kh.choi@kaist.ac.kr}}%
 }
 
 \date{
@@ -50,6 +52,47 @@
 \begin{document}
 
 \maketitle
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Biography
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\newenvironment{IEEEbiography}[2][{}]{%
+  \par\medskip\noindent
+  \begin{minipage}[t]{1in}
+    \vspace{0pt}
+    #1
+  \end{minipage}%
+  \hspace{0.2in}%
+  \begin{minipage}[t]{\dimexpr\linewidth-1.2in\relax}
+    \vspace{0pt}
+    \textbf{#2}\par\smallskip
+}{%
+  \end{minipage}
+  \par\medskip
+}
+
+\newpage
+
+\begin{IEEEbiography}[{
+    \includegraphics[width=1in,height=1.25in,clip,keepaspectratio]{\template/people/msRyu.jpg}}]{Myeongseok Ryu {\tt{\small dding\_98@kaist.ac.kr}}}
+    received the B.S. degree in Mechanical Engineering from Incheon National University, South Korea, in 2023, and the M.S. degree in Mechanical Engineering from GIST, South Korea, in 2025.
+    He is currently pursuing the Ph.D. degree in the Cho Chun Shik Graduate School of Mobility at Korea Advanced Institute of Science and Technology (KAIST), South Korea.
+    His research interests include neuro-adaptive control, online optimization, and contraction theory.
+\end{IEEEbiography}
+
+\begin{IEEEbiography}[{
+    \includegraphics[width=1in,height=1.25in,clip,keepaspectratio]{\template/people/nsErega.jpg}}]{Naol Samuel Erega {\tt{\small samuelnaol7@kaist.ac.kr}}}
+    received the B.S. degree in Mechanical Engineering from Incheon National University, South Korea, in 2023, and the M.S. degree in Mechanical Engineering from GIST, South Korea, in 2025.
+    He is currently pursuing the Ph.D. degree in the Cho Chun Shik Graduate School of Mobility at Korea Advanced Institute of Science and Technology (KAIST), South Korea.
+    His research interests include neuro-adaptive control, online optimization, and contraction theory.
+\end{IEEEbiography}
+
+\begin{IEEEbiography}[{
+    \includegraphics[width=1in,height=1.25in,clip,keepaspectratio]{\template/people/khChoi.jpg}}]{Kyunghwan Choi {\tt{\small kh.choi@kaist.ac.kr}}}
+    received his B.S., M.S., and Ph.D. degrees in Mechanical Engineering from KAIST, Daejeon, South Korea, in 2014, 2016, and 2020, respectively. Following his Ph.D., he worked at the Center for Eco-Friendly \& Smart Vehicles at KAIST as a Postdoctoral Fellow and later as a Research Assistant Professor. In 2022, he joined GIST as an Assistant Professor in the Department of Mechanical and Robotics Engineering. Currently, he serves as an Assistant Professor at the Cho Chun Shik Graduate School of Mobility at KAIST, where he is also the Director of the Mobility Intelligence and Control Laboratory. His research focuses on optimal and learning-based control for connected, automated, and electrified vehicles (CAEVs).
+\end{IEEEbiography}
+
+\newpage
 
 \begin{abstract}
   This proposal presents a neural-network framework for enforcing hard constraints in the presence of uncertain constraint functions.
