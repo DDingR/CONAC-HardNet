@@ -8,8 +8,8 @@
 \chapter{Hard-CONAC: Integration of HardNet++ and CONAC}
 \label{CONAC:chap:hard:CONAC}
 
-This chapter introduces the proposed Hard-Constrained Optimization-Based Neuro-Adaptive Control (Hard-CONAC) architecture, which integrates the HardNet++ framework with the CONAC approach.
-Using the HardNet++ framework, the proposed Hard-CONAC architecture can handle hard constraints on the control input, which is a significant improvement over the original CONAC approach that only considers soft constraints.
+This chapter introduces the Hard-Constrained Optimization-Based Neuro-Adaptive Control (Hard-CONAC) architecture, which integrates the HardNet++ framework with the CONAC approach.
+Using the HardNet++ framework, the Hard-CONAC architecture can handle hard constraints on the control input, which is a significant improvement over the original CONAC approach that only considers soft constraints.
 
 The remainder of this chapter formulates the control problem in Section~\ref{CONAC:sec:problem:formulation}, introduces the DNN with a differentiable projection layer in Section~\ref{CONAC:sec:DNN:arch}, develops Hard-CONAC and its adaptation laws in Section~\ref{CONAC:sec:proposed:method}, analyzes its stability in Section~\ref{CONAC:sec:stability:analysis}, validates its performance in Section~\ref{CONAC:sec:validation}, and concludes in Section~\ref{CONAC:sec:conclusion}.
 
@@ -33,7 +33,8 @@ Consider a nonlinear system with the following dynamics:
   \right)
   ,
 \end{equation}
-where $\mv{x} \in \R^{n}$ is the state vector, $\mv{u} \in \R^{m}$ is the control input, $\mv{f}:\R^n\to\R^m$ is an unknown system function, $\mm{B}:\R^n\to\R^{n\times m}$ is a unknown control effective matrix, and $\mysat(\cdot)$ represents the saturation function.
+where $\mv{x} \in \R^{n}$ is the state vector, $\mv{u} \in \R^{n}$ is the control input, $\mv{f}:\R^n\to\R^n$ is an unknown system function and $\mm{B}:\R^n\to\R^{n\times n}$ is a unknown control effective matrix.
+The saturation function $\mysat:\R^n\to\Omega_u$ maps the unconstrained input $\mv{u}$ into the admissible input set $\Omega_u\subset\R^n$.
 
 The system is subject to the following assumptions:
 
@@ -50,122 +51,137 @@ The system is subject to the following assumptions:
   $
   where $\underline{b},\bar{b}\in\R_{>0}$ are unknown positive constants.
 \end{assum}
+
 \begin{assum}[{\cite[Assump. 1(b)]{Boulkroune:2010aa}}] 
   \label{CONAC:assum:B:bound:grad}
   There exists an unknown positive function $\rho_{\beta}(\mv{x}):\R^n\to\R_{>0}$ such that $\tfrac{1}{2}\mv{v}^\top\left(\ddtt\mm{B}(\mv{x})^{-1}\right)\mv{v} \le \rho_{\beta}(\mv{x})\norm{\mv{v}}^2$, $\forall \mv{v}\in\R^n$, and $\forall \mv{x}\in\R^n$. 
 \end{assum}
 
-The saturation function $\mysat(\cdot)$ may be chosen arbitrarily, provided that it maps the unconstrained input $\mv{u}$ into the admissible input set $\Omega_u\subset\R^n$.
-The admissible input set is defined as follows:
-\begin{equation}
-  \label{CONAC:eq:adm:input:set}
-  \Omega_u
-  =
-  \left\{
-    \mv{u}\in\R^n
-    \mid
-    \underline{\mv{b}}
-    \leq
-    \mv{c}(\mv{u})
-    \leq
-    \overline{\mv{b}}
-  \right\}
-  ,
-\end{equation}
-where $c(\mv{u})$ is a constrained function vector and $\underline{b},\overline{b}\in\R^n$ are the lower and upper bounds of the constraints, respectively.
+\begin{assum} 
+  \label{CONAC:assum:sat}
+  The admissible input set $\Omega_u$ and saturation function $\mysat(\mv{u})$ satisfy the following conditions:
+  \begin{enumerate}
+    \item
+    The admissible input set $\Omega_u$ is defined by constraint vector $\mv{c}:\R^n\to\R^{n_c}$ and its lower and upper bounds $\underline{\mv{b}},\overline{\mv{b}}\in\R^{n_c}$, as follows:
+    \begin{equation}
+      \label{CONAC:eq:adm:input:set}
+      \Omega_u
+      =
+      \left\{
+        \mv{u}\in\R^n
+        :
+        \underline{\mv{b}} \le \mv{c}(\mv{u}) \le \overline{\mv{b}}
+      \right\}
+      .
+    \end{equation}
+    where $n_c$ denotes the number of constraints.
+
+    \item
+    The saturation function $\mysat(\mv{u})$ maps the unconstrained input $\mv{u}$, such that 
+    \begin{equation}
+      \mysat(\mv{u})=\mv{u},\quad \forall \mv{u}\in\Omega_u
+      ,
+      \quad\text{and}\quad
+      \mysat(\mv{u})
+      \in
+      \left\{
+        \mv{v}\in\R^n
+        :
+        \arg\min_{\mv{v}\in\Omega_u}
+        \norm{\mv{v}-\mv{u}}
+      \right\}
+      ,
+      \quad \forall \mv{u}\notin\Omega_u
+      .
+    \end{equation}
+
+  \end{enumerate}
+\end{assum}
+
+For the constraint vector $\mv{c}(\mv{u})$ in Assumption~\ref{CONAC:assum:sat}, the following assumptions are made.
+
+\begin{assum}[Smoothness of the constraint vector]
+  \label{CONAC:assum:c:smooth}
+  The constraint vector $\mv{c}(\mv{u})$ is a function of the class $\mathcal{C}^{1,1}$ defined in Definition~\ref{PRE:def:C11}, which implies that $\mv{c}(\mv{u})$ is continuously differentiable and its Jacobian $\mm{J}_c(\mv{u}):=\pptfrac{\mv{c}(\mv{u})}{\mv{u}}\in\R^{n_c\times n}$ is locally Lipschitz continuous.
+\end{assum}
+
+\begin{assum}[Non-degeneracy of the violated constraint vector]
+  \label{CONAC:assum:non:degeneracy}
+  The Jacobian $\mm{J}_{\mathcal{A}}(\mv{u})$ of the violated constraint vector is full rank for all $\mv{u}\in\R^n$, which implies that the violated constraint vector is non-degenerate \cite[Chap. 16.4, pp. 465--467]{Nocedal:2006aa}.
+\end{assum}
 
 \par\medskip
 
-Additionally, the desired trajectory $\mv{x}_d(t):\R_{\ge0}\to\R^n$ is assumed to be given and satisfies the following assumption.
+Additionally, the desired trajectory 
+$
+  \boldsymbol{x}_d:
+  t
+  \in
+  \mathbb{R}_{\geq 0}
+  \mapsto
+  \boldsymbol{x}_d(t)\in\mathbb{R}^n
+$
+is assumed to be given and satisfies the following assumption.
 
 \begin{assum} 
   \label{CONAC:assum:xd}
   The desired trajectory $\mv{x}_d:=\mv{x}_d(t)$ is sufficiently smooth, and $\mv{x}_d$ and $\ddtt\mv{x}_d$ are bounded.
 \end{assum}
 
-The control objective is to design a NAC for the unknown system \eqref{CONAC:eq:sys} such that $\mv{x}$ tracks the desired trajectory $\mv{x}_d$, the multiple convex input constraints defined by $\mysat(\cdot)$ are satisfied, and closed-loop stability is guaranteed.
+The control objective is to design a NAC for the unknown system \eqref{CONAC:eq:sys} such that $\mv{x}$ tracks the desired trajectory $\mv{x}_d$, the hard input constraints defined in Assumption~\ref{CONAC:assum:sat} are satisfied, and closed-loop stability is guaranteed.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% DNN ARCHITECTURE WITH DIFFERENTIABLE PROJECTION LAYER
+% DNN ARCHITECTURE
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{DNN Architecture with Differentiable Projection Layer (DPL)}
+\section{Constraint-Enforcing DNN Architecture for Hard-CONAC}
 \label{CONAC:sec:DNN:arch}
+
+% —————————————————————————————————————————————————————
+% DNN ARCHITECTURE: DNN with Differentiable Projection Layer
+% —————————————————————————————————————————————————————
+\subsection{DNN Architecture with Differentiable Projection Layer}
+\label{CONAC:sec:DNN:arch:DPL}
 
 \begin{figure}[t]
   \centering
-  \includegraphics[width=0.99\linewidth]
+  \includegraphics[width=0.89\linewidth]
   {
     figs/general_figs/ConstrainedDNN.drawio.pdf
   }
   \caption{
-    Example illustration of the Hard-CONAC architecture whose node numbers of the hidden layers are all set to $3$ and the size of input and output are both $2$.
+    Example illustration of the constraint-enforcing DNN architecture.
   }
   \label{CONAC:fig:hard:CONAC:arch}
 \end{figure}
 
-We first present the architecture of the DNN which is used in the proposed Hard-CONAC.
-The architecture of the proposed Hard-CONAC is illustrated in Fig.~\ref{CONAC:fig:hard:CONAC:arch}.
-As shown in the figure, the output of the unconstrained DNN is projected onto the feasible set defined by the constraints using the differentiable projection layer (DPL).
+We first present the architecture of the DNN which is used in the Hard-CONAC.
+The architecture of the DNN is illustrated in Fig.~\ref{CONAC:fig:hard:CONAC:arch}.
+As shown in the figure, the output of the unconstrained DNN is projected onto the admissible input set $\Omega_u$ using the differentiable projection layer (DPL).
 
-The unconstrained DNN $\NN_u(\NNin;\wth)$ is parameterized by the weight vector $\wth\in\R^{\Xi}$ and the input vector $\NNin\in\R^{l_0+1}$, where $l_0$ is the number of input nodes and $\Xi$ is the total number of weights in the DNN.
-Specifically, the unconstrained DNN $\NN_u$ is recursively defined as follows:
+The unconstrained DNN 
 \begin{equation}
-  \label{CONAC:eq:DNN:uncon}
-  \NN_i
-  =
-  \begin{cases}
-    \wV_i^\top\act_i
-    ,
-    & 
-    i \in \{1,\ldots,L\}
-    \\
-    \wV_0^\top\NNin
-    ,
-    &
-    i = 0
-    ,
-  \end{cases}
+  \NN_u:
+  \mathbb{R}^{\ell_0+1}\times\mathbb{R}^{\Xi}
+  \rightarrow
+  \mathbb{R}^{\ell_{L+1}},
+  \qquad
+  (\NNin,\wth)
+  \mapsto
+  \NN_u(\NNin;\wth)
 \end{equation}
-where $\wV_i\in\R^{l_{i}+1}\times l_{i+1}$ is the weight matrix of the $i$-th layer, and $\act_i\in\R^{l_{i}+1}$ is the activation vector of the $i$-th layer.
-By adopting the differentiable projection layer (DPL) from HardNet++ proposed in \cite{Goertzen:2026aa}, the constrained DNN $\NN$ is defined as follows:
+is parameterized by the weight vector $\wth\in\R^{\Xi}$ and the input vector $\NNin\in\R^{\ell_0+1}$, as defined in Section~\ref{PRE:sec:NN}.
+It is noted that the size of the output layer is equal to the number of control inputs, \ie $\ell_{L+1}=n$.
+By adopting the differentiable projection layer (DPL) from HardNet++ proposed in \cite{Goertzen:2026aa}, the constrained DNN $\NN_c$ is defined as follows:
 \begin{equation}
   \label{CONAC:eq:DNN:con}
-  \NN
+  \NN_c
   =
-  \Pi(\NN_u)
+  \mv{\Pi}(\NN_u)
   ,
 \end{equation}
-where $\Pi:\R^{l_{L+1}}\to\R^{l_{L+1}}$ is the projection operator that projects the unconstrained DNN output $\NN_u$ onto the feasible set defined by the constraints.
-The constraints are defined as follows:
-\begin{equation}
-  \label{CONAC:eq:cstr}
-  \underline{\mv{b}}
-  \leq
-  \mv{c}(\NN_u)
-  \leq
-  \overline{\mv{b}}
-  ,
-\end{equation}
-where $\mv{c},\underline{\mv{b}},\overline{\mv{b}}$ coincide with those in \eqref{CONAC:eq:adm:input:set} without their arguments for brevity.
-
-The projection operator $\Pi(\NN_u)$ corrects $\NN_u$ to satisfy the constraints in \eqref{CONAC:eq:cstr} by minimizing the residual of the constraints, which is defined as follows:
-\begin{equation}
-  \label{CONAC:eq:proj:residual}
-  \mv{r}(\NN_u) 
-  = 
-  \myReLU
-  \left(
-    \mv{c}(\NN_u) - \overline{\mv{b}}
-  \right)
-  +
-  \myReLU
-  \left(
-    \underline{\mv{b}} - \mv{c}(\NN_u)
-  \right)
-  ,
-\end{equation}
-where $\mv{r}:=\mv{r}(\NN_u)$ is the residual of the constraints, and $\myReLU(\cdot):=\max(0, \cdot)$ is the rectified linear unit function.
+where $\mv{\Pi}:\R^{n}\to\tilde{\Omega}_c$ is the projection operator.
+The set $\tilde{\Omega}_c\supset\Omega_c$ is a relaxed admissible input set, which will be defined in the subsequent section.
 
 \begin{algorithm}[!t]
   \caption{Differentiable Projection Layer (DPL)}
@@ -196,14 +212,14 @@ where $\mv{r}:=\mv{r}(\NN_u)$ is the residual of the constraints, and $\myReLU(\
         \left(\underline{\mv{b}}-\mv{c}^{(k)}\right)
       \]
 
-      \IF{$\|\mv{r}^{(k)}\|_{\infty}
-              \leq\varepsilon_{\mathrm{tol}}$}
+      \IF{$\norm{\mv{r}^{(k)}}
+              \leq r_{\mathrm{tol}}$}
         \STATE \textbf{break}
       \ENDIF
 
       \STATE Compute the constraint Jacobian
       \[
-        \mm{J}^{(k)}
+        \mm{J}_c^{(k)}
         \leftarrow
         \left.
         \frac{\partial\mv{c}(\mv{y})}
@@ -211,13 +227,20 @@ where $\mv{r}:=\mv{r}(\NN_u)$ is the residual of the constraints, and $\myReLU(\
         \right|_{\mv{y}=\mv{y}^{(k)}}
       \]
 
+      \STATE Compute the Gram matrix of the constraint function
+      \[
+        \mm{H}_c^{(k)}
+        \leftarrow
+        \mm{J}_c^{(k)}{\mm{J}_c^{(k)}}^{\top}
+      \]
+
       \STATE Compute the damped correction
       \[
         \Delta\mv{y}^{(k)}
         \leftarrow
-        -{\mm{J}^{(k)}}^{\top}
+        -{\mm{J}_c^{(k)}}^{\top}
         \left(
-          \mm{J}^{(k)}{\mm{J}^{(k)}}^{\top}
+          \mm{H}_c^{(k)}
           +\mm{E}
         \right)^{-1}
         \mv{r}^{(k)}
@@ -233,7 +256,7 @@ where $\mv{r}:=\mv{r}(\NN_u)$ is the residual of the constraints, and $\myReLU(\
 
     \STATE \textbf{Output:}
     \[
-      \Pi(\NN_u)
+      \mv{\Pi}(\NN_u)
       \leftarrow
       \mv{y}^{(K)}
     \]
@@ -242,47 +265,704 @@ where $\mv{r}:=\mv{r}(\NN_u)$ is the residual of the constraints, and $\myReLU(\
 
 \par\medskip
 
-The projection operator $\Pi(\NN_u)$ iteratively linearize the constraint function $\mv{c}$ and projects the input onto the feasible set defined by the linearized constraints.
-For better intuition, the algorithm of the projection operator $\Pi(\cdot)$ is summarized in Algorithm~\ref{CONAC:alg:proj}.
-
-When the unconstrained DNN output $\NN_c$ violates any constraint, the DPL initializes $\mv{y}^{(0)}=\NN_c$ and constructs a linearized projection step by locally approximating the constraint functions.
-For instance, at step $k$, the linearized constraints are constructed at $\mv{y}^{(k)}$, as follows:
+The projection operator $\mv{\Pi}(\NN_u)$ iteratively corrects $\NN_u$ which is considered as an initial projected variable $\mv{y}^{(0)}$ to satisfy the constraints in \eqref{CONAC:eq:adm:input:set}.
+Consider $k$-th iteration of the DPL, where $\mv{y}^{(k)}$ is the projected variable at the $(k-1)$-th iteration.
+Then the constraint is linearized at $\mv{y}^{(k)}$ as follows:
 \begin{equation}
   \underline{\mv{b}}
   \le
-  c(\mv{y}^{(k)}) + \mm{J}^{(k)}(\mv{y}^{(k+1)}-\mv{y}^{(k)})
+  \mv{c}^{(k)}
+  + 
+  {\mm{J}_c^{(k)}}^\top\Delta{\mv{y}}^{(k)}
   \le
   \overline{\mv{b}}
   ,
 \end{equation}
-where $\mm{J}^{(k)}$ is the Jacobian of the constraint function evaluated at $\mv{y}^{(k)}$.
-Invoking the linearized constraints, HardNet-Aff presented in \cite{Min:2025aa} 
-\cred{
-  Need to be added!
-}
+where $\mv{c}^{(k)}$ and $\mm{J}^{(k)}$ are the constraint vector and the Jacobian of the constraint vector $\mv{c}(\mv{y})$ evaluated at $\mv{y}=\mv{y}^{(k)}$, and $\Delta\mv{y}^{(k)}:=\mv{y}^{(k+1)}-\mv{y}^{(k)}$ is the correction term.
 
-Then, by adding a damping term $\mm{E}=\mm{E}^\top\succ\mm{0}$, the projection step is computed as follows:
+A residual of the constraint is defined as follows:
+\begin{equation}
+  \label{CONAC:eq:proj:residual}
+  \mv{r}^{(k)}
+  = 
+  \myReLU
+  \left(
+    \mv{c}^{(k)} - \overline{\mv{b}}
+  \right)
+  -
+  \myReLU
+  \left(
+    \underline{\mv{b}} - \mv{c}^{(k)}
+  \right)
+  ,
+\end{equation}
+where $\mv{r}^{(k)}:=\mv{r}(\mv{y}^{(k)})$ and $\myReLU(\cdot):=\max(0, \cdot)$ is the element-wise rectified linear unit (ReLU) function.
+
+Then, the correction term $\Delta\mv{y}^{(k)}$ is computed by solving the following optimization problem:
+\begin{equation}
+  \label{CONAC:eq:proj:opt}
+  \min_{\Delta\mv{y}^{(k)}\in\R^n} \quad
+  \norm{\mv{r}^{(k)} + \mm{J}_c^{(k)}\Delta\mv{y}^{(k)}}^2 
+  + 
+  {\Delta\mv{y}^{(k)}}^\top
+  \mm{E}
+  \Delta\mv{y}^{(k)}
+  ,
+\end{equation}
+where $\mm{E}:=\mydiag(\varepsilon_1,\varepsilon_2,\ldots,\varepsilon_{n_c})$ is a damping matrix with $\varepsilon_i\in\R_{>0},\ \forall i\in\{1,\ldots,n_c\}$.
+By tuning the corresponding damping parameters $\varepsilon_i$, each constraint can be prioritized in the projection process.
+Furthermore, $\mm{E}$ helps convexification of the optimization problem \eqref{CONAC:eq:proj:opt} and guarantees the existence of a unique solution.
+
+The explicit solution of the unconstrained optimization problem \eqref{CONAC:eq:proj:opt} is given by
 \begin{equation}
   \label{CONAC:eq:proj:step}
-  \mv{y}^{(k+1)}
+  \Delta\mv{y}^{(k)}
   =
-  \mv{y}^{(k)}
   -
   {\mm{J}^{(k)}}^{\top}
   \left(
-    \mm{J}^{(k)}{\mm{J}^{(k)}}^{\top}
+    \mm{H}_c^{(k)}
     +\mm{E}
   \right)^{-1}
   \mv{r}^{(k)}
+  ,
+\end{equation}
+where $\mm{H}_c^{(k)} = \mm{J}_c^{(k)}{\mm{J}_c^{(k)}}^{\top}$ is the Gram matrix of the constraint function $\mv{c}(\mv{y})$ evaluated at $\mv{y}=\mv{y}^{(k)}$.
+
+We assume that the number of linearized projection iterations is finite and denoted by $K$.
+Moreover, in a practical perspective, we introduce a tolerance $r_{\mathrm{tol}}\in\R_{>0}$ for the constraint residual $\mv{r}^{(k)}$ for the early termination of the DPL.
+This results in the relaxed admissible input set $\tilde{\Omega}_c\supset\Omega_c$ defined in \eqref{CONAC:eq:proj:relaxed:admissible} and finite-iteration convergence of the DPL, which will be discussed in Corollary~\ref{CONAC:cor:proj:finite:step} and Lemma~\ref{CONAC:lem:proj:sat:err:bound}.
+
+For better intuition, the algorithm of the projection operator $\mv{\Pi}(\NN_u)$ is summarized in Algorithm~\ref{CONAC:alg:proj}.
+
+% —————————————————————————————————————————————————————
+% DNN ARCHITECTURE: Convergence Analysis of the DPL
+% —————————————————————————————————————————————————————
+\subsection{Convergence Analysis of the Differentiable Projection Layer}
+
+The convergence of the DPL is analyzed by introducing the following constraint violation energy function:
+\begin{equation}
+  \label{CONAC:eq:proj:Vp}
+  V_p(\mv{y})
+  :=
+  \frac{1}{2}
+  \norm{\mv{r}(\mv{y})}^2
+  ,
+\end{equation}
+for arbitrary $\mv{y}\in\R^{n}$.
+In addition, we note that a set of minimizers $\mv{y}^*$ of $V_p(\mv{y})$ is equal to $\Omega_u$, as follows:
+\begin{equation}
+  \label{CONAC:eq:proj:Vp:minimizer}
+  \Omega_u  
+  :=
+  \left\{
+    \mv{y}^*\in\R^{n}
+    :
+    V_p(\mv{y}^*) = 0
+  \right\}
+  =
+  \left\{
+    \mv{y}^*\in\R^{n}
+    :
+    \mv{r}(\mv{y}^*) = 0
+  \right\}
+  =
+  \left\{
+    \mv{y}^*\in\R^{n}
+    :
+    \underline{\mv{b}} \le \mv{c}(\mv{y}^*) \le \overline{\mv{b}}
+  \right\}
   .
 \end{equation}
-Finally, when the infinite norm of the constraint residual $\mv{r}^{(k)}$ is less than a specified tolerance $\varepsilon_{\mathrm{tol}\in\R_{>0}}$, the DPL terminates the iteration and outputs the projected variable $\mv{y}^{(K)}$ as the final output of the projection operator $\Pi(\NN_u)$.
+Hence, the desired convergence of the DPL is achieved when $V_p(\mv{y})$ converges to zero, which implies that initial (unconstrained) $\mv{y}^{(0)}$ converges to $\Omega_u$.
 
+\par\medskip
+
+Before analyzing the convergence of the DPL, we first introduce the following three lemmas.
+
+\begin{lem}[Local Lipschitz continuity of the constraint vector $\mv{c}(\mv{y})$]
+  \label{CONAC:lem:proj:c:Lipschitz}
+  Let the constraint vector $\mv{c}(\mv{y})$ satisfy Assumption~\ref{CONAC:assum:c:smooth}.
+  Then, for a compact convex set $\Omega\subset\R^{n}$, and for all $\mv{y}_1,\mv{y}_2\in\Omega$, the following statements hold: 
+  \begin{align}
+    \label{CONAC:eq:proj:lem:c:Lipschitz}
+    \exists \overline{J}\in\R_{>0}
+    &
+    :
+    \norm{\mv{J}_c(\mv{y}_1)}
+    \le
+    \overline{J}
+    ,\quad
+    \lambda_{\max}
+    (
+      \mm{H}_c(\mv{y}_1)
+    )
+    \le
+    \overline{J}^2
+    ,
+    \\
+    \exists \overline{G}\in\R_{>0}
+    &
+    :
+    \norm{\mv{J}_c(\mv{y}_1) - \mv{J}_c(\mv{y}_2)}
+    \le
+    \overline{G}\norm{\mv{y}_1-\mv{y}_2}
+    .
+  \end{align}
+\end{lem}
+
+\begin{proof}
+  
+  From Assumption~\ref{CONAC:assum:c:smooth}, the constraint vector $\mv{c}(\mv{y})\in\mathcal{C}^{1,1}$ is continuously differentiable and its Jacobian $\mv{J}_c(\mv{y})$ is locally Lipschitz continuous for all $\mv{y}\in\Omega$.
+  This implies that there exists a positive constant $\overline{J}$ such that $\norm{\mv{J}_c(\mv{y})}\le\overline{J}$, and $\norm{\mm{H}_c(\mv{y})}\le\overline{J}^2$, according to Lemma~\ref{PRE:lem:con:lip}.
+  Moreover, since $\mm{H}_c(\mv{y}) = \mv{J}_c(\mv{y})\mv{J}_c(\mv{y})^\top$ is a symmetric positive semidefinite matrix, we have
+  \begin{equation}
+    \norm{\mm{H}_c(\mv{y})}
+    =
+    \lambda_{\max}
+    (
+      \mm{H}_c(\mv{y})
+    )
+    ,
+  \end{equation}
+  by the definition of the spectral norm of a symmetric matrix.
+
+  Rest of the proof follows from the definition of the class $\mathcal{C}^{1,1}$, which implies $\overline{G}$-Lipschitz continuity of the Jacobian $\mv{J}(\mv{y})$, according to Lemma~\ref{PRE:lem:lib:grad:bound}.
+
+\end{proof}
+
+\begin{lem}[Local $L$-smoothness of the constraint violation energy function $V_p(\mv{y})$]
+  \label{CONAC:lem:proj:Vp:L:smooth}
+  Assume that the constraint vector $\mv{c}(\mv{y})$ satisfies Assumption~\ref{CONAC:assum:c:smooth}.
+  Then, for a compact convex set $\Omega\subset\R^{n}$, the constraint violation energy function $V_p(\mv{y})$, is $L_{V_p}$-smooth, implying 
+  \begin{equation}
+    \label{CONAC:eq:proj:lem:Vp:L:smooth}
+    \exists L_{V_p}\in\R_{>0}
+    :
+    V_p(\mv{y}_2)
+    \le
+    V_p(\mv{y}_1)
+    +
+    \nabla V_p(\mv{y}_1)^\top
+    \left(
+      \mv{y}_2 - \mv{y}_1
+    \right)
+    +
+    \frac{L_{V_p}}{2}
+    \norm{\mv{y}_2 - \mv{y}_1}^2
+    ,
+    \qquad
+    \forall 
+    \mv{y}_1,\mv{y}_2\in\Omega
+    ,
+  \end{equation}
+  where $\nabla V_p(\mv{y})$ is the gradient of $V_p(\mv{y})$ with respect to $\mv{y}$.
+\end{lem}
+
+\begin{proof}
+
+  From the definition of the residual $\mv{r}(\mv{y})$ in \eqref{CONAC:eq:proj:residual}, the gradient of $\mv{r}(\mv{y})$ with respect to $\mv{c}(\mv{y})$ is limited by $1$, which implies the following inequality:
+  \begin{equation}
+    \norm{\mv{r}(\mv{y}_1) - \mv{r}(\mv{y}_2)}
+    \le
+    \norm{\mv{c}(\mv{y}_1) - \mv{c}(\mv{y}_2)}
+    \le
+    \overline{J}\norm{\mv{y}_1-\mv{y}_2}
+    .
+  \end{equation}
+  Hence, the Lipschitz continuity of the residual $\mv{r}(\mv{y})$ is established with a Lipschitz constant $\overline{J}$.
+  Furthermore, the following statement holds:
+  \begin{equation}
+    \exists \overline{r}\in\R_{>0}
+    :
+    \norm{\mv{r}(\mv{y})}\le\overline{r}
+    ,
+    \quad
+    \forall \mv{y}\in\Omega
+    .
+  \end{equation}
+
+  \par\medskip
+
+  On the other hand, the gradient of $V_p$ is computed as follows:
+  \begin{equation}
+    \nabla V_p(\mv{y})
+    =
+    \left(\mm{D}\mm{J}_c(\mv{y})\right)^\top
+    \mv{r}(\mv{y})
+    ,
+  \end{equation}
+  where $\mm{D}:=\mm{D}(\mv{y})$ denotes the diagonal matrix of the ReLU function's gradients, which is defined as follows:
+  \begin{equation}
+    \label{CONAC:eq:proj:Vp:grad:ReLU}
+    D_{ij}
+    =
+    \begin{cases}
+      1, & \text{if } i=j \text{ and } r_i>0 
+      ,
+      \\
+      0, & \text{otherwise}
+      ,
+    \end{cases}
+  \end{equation}
+  where $D_{ij}$ and $r_i$ are $(i,j)$-th and $i$-th elements of $\mm{D}(\mv{y})$ and $\mv{r}(\mv{y})$, respectively.
+  Since $i$-th constraint of $\mv{r}(\mv{y})$ is zero when the constraint is not violated, we have $\mm{D}(\mv{y})^\top\mv{r}(\mv{y}) = \mv{r}(\mv{y})$ and simplified $\nabla V_p(\mv{y})$ as follows:
+  \begin{equation}
+    \label{CONAC:eq:proj:Vp:grad:simple}
+    \nabla V_p(\mv{y})
+    =
+    \mm{J}_c(\mv{y})^\top
+    \mv{r}(\mv{y})
+    .
+  \end{equation}
+  
+  Then, the difference of the gradients of $V_p$ at $\mv{y}_1$ and $\mv{y}_2$ is computed as follows:
+  \begin{equation}
+    \begin{aligned}
+      \label{CONAC:eq:proj:Vp:grad:diff}
+      \nabla V_p(\mv{y}_1) - \nabla V_p(\mv{y}_2)
+      =
+      &
+      \mm{J}_c(\mv{y}_1)^\top
+      \mv{r}(\mv{y}_1)
+      -
+      \mm{J}_c(\mv{y}_2)^\top
+      \mv{r}(\mv{y}_2)
+      \\
+      =
+      &
+      \mm{J}_c(\mv{y}_1)^\top
+      \left(
+        \mv{r}(\mv{y}_1)-\mv{r}(\mv{y}_2)
+      \right)
+      +
+      \left(
+        \mm{J}_c(\mv{y}_1) - \mm{J}_c(\mv{y}_2)
+      \right)^\top
+      \mv{r}(\mv{y}_2)
+      .
+    \end{aligned}
+  \end{equation}
+  The norm of the difference of the gradients of $V_p$ is bounded as follows:
+  \begin{equation}
+    \label{CONAC:eq:proj:Vp:L:smooth}
+    \begin{aligned}
+      \norm{\nabla V_p(\mv{y}_1) - \nabla V_p(\mv{y}_2)}
+      \le
+      &
+      \norm{\mm{J}_c(\mv{y}_1)^\top}
+      \norm{\mv{r}(\mv{y}_1)-\mv{r}(\mv{y}_2)}
+      +
+      \norm{\mm{J}_c(\mv{y}_1)^\top - \mm{J}_c(\mv{y}_2)^\top}
+      \norm{\mv{r}(\mv{y}_2)}
+      \\
+      \le
+      &
+      \overline{J}^2\norm{\mv{y}_1-\mv{y}_2}
+      +
+      \overline{G}\overline{r}\norm{\mv{y}_1-\mv{y}_2}
+      \\
+      =
+      &
+      L_{V_p}\norm{\mv{y}_1-\mv{y}_2}
+      ,
+    \end{aligned}
+  \end{equation}
+  resulting in the $L_{V_p}$-smoothness of $V_p(\mv{y})$ with a Lipschitz constant $L_{V_p}:=\overline{J}^2+\overline{G}\overline{r}$.
+  Finally, we can conclude the proof by applying the result of Lemma~\ref{PRE:lem:lib:ineq}.
+
+\end{proof}
+
+\begin{lem}[$\mu$-Polyak-\L{}ojasiewicz (PL) condition of the constraint violation energy function $V_p(\mv{y})$]
+  \label{CONAC:lem:proj:Vp:lower:bound}
+  Consider the constraint vector $\mv{c}(\mv{y})$ satisfying Assumptions~\ref{CONAC:assum:c:smooth} and \ref{CONAC:assum:non:degeneracy}.
+  Then, for $\mv{y}\in\Omega\subset\Omega_u\subset\R^{n}$, where $\Omega$ is a compact convex set, the following statement holds:
+  \begin{equation}
+    \label{CONAC:eq:proj:Vp:PL}
+    \exists \mu\in\R_{>0}
+    :
+    \norm{\nabla V_p(\mv{y})}^2
+    \ge
+    2\mu
+    \left(
+      V_p(\mv{y})
+      -
+      V_p^*
+    \right)
+    ,
+    \qquad
+    \forall \mv{y}\in\Omega
+    ,
+  \end{equation}
+  where $V_p^*:=\min_{\mv{y}\in\Omega}V_p(\mv{y})=0$ is the minimum value of $V_p(\mv{y})$.
+\end{lem}
+
+\begin{proof}
+  
+  Let $\mv{r}^{\mathcal{A}}(\mv{y})$ and $\mm{J}_c^{\mathcal{A}}(\mv{y})$ be the residual and Jacobian of the violated constraints in the constraint vector $\mv{c}(\mv{y})$, respectively.
+  Then, since the residual of the non-violated constraints is zero, we have
+  \begin{equation}
+    \mv{r}(\mv{y})^\top
+    \mm{H}_c(\mv{y})  
+    \mv{r}(\mv{y})
+    =
+    \mv{r}^{\mathcal{A}}(\mv{y})^\top
+    \mm{H}_c^{\mathcal{A}}(\mv{y})
+    \mv{r}^{\mathcal{A}}(\mv{y})
+    \ge
+    \lambda_{\min}
+    \left(
+      \mm{H}_c^{\mathcal{A}}(\mv{y})
+    \right)
+    \norm{\mv{r}^{\mathcal{A}}(\mv{y})}^2
+    \ge
+    \mu
+    \norm{\mv{r}(\mv{y})}^2
+    ,
+  \end{equation}
+  where $\mm{H}_c^{\mathcal{A}}(\mv{y}) := \mm{J}_c^{\mathcal{A}}(\mv{y}){\mm{J}_c^{\mathcal{A}}(\mv{y})}^\top$, and $\lambda_{\min}(\mm{H}_c^{\mathcal{A}}(\mv{y}))$ is the minimum eigenvalue of $\mm{H}_c^{\mathcal{A}}(\mv{y})$.
+  The positive definiteness of $\mm{H}_c^{\mathcal{A}}(\mv{y})$ is guaranteed by Assumption~\ref{CONAC:assum:non:degeneracy}, which implies that the Jacobian of the violated constraints is full rank.
+  Hence, the existence of the minimum positive constant $\mu$ is guaranteed by the compactness of $\Omega$.
+
+  The proof of the $\mu$-PL inequality follows from $V_p^*=0$, as follows:
+  \begin{equation}
+    \norm{\nabla V_p(\mv{y})}^2
+    =
+    \norm{\mm{J}_c(\mv{y})^\top\mv{r}(\mv{y})}^2
+    =
+    \mv{r}(\mv{y})^\top
+    \mm{H}_c(\mv{y})
+    \mv{r}(\mv{y})
+    \ge
+    \mu
+    \norm{\mv{r}(\mv{y})}^2
+    =
+    2\mu
+    V_p(\mv{y})
+    =
+    2\mu
+    \left(
+      V_p(\mv{y})
+      -
+      V_p^*
+    \right)
+    .
+  \end{equation}
+
+\end{proof}
+
+The following theorem guarantees the asymptotic convergence of the DPL, followed by corollary that guarantees the convergence of the DPL in a finite iteration.
+
+\begin{theorem}[Convergence of the DPL \cite{Goertzen:2026aa}]
+  \label{CONAC:thm:proj:convergence}
+  Consider the constraint function satisfying Assumptions~\ref{CONAC:assum:c:smooth} and \ref{CONAC:assum:non:degeneracy} and initial input $\mv{y}^{(0)}$ of the DPL in a compact convex set $\Omega\subset\R^{n}$.
+  Moreover, the minimum eigenvalue $\varepsilon_{\min}$ of the damping matrix $\mm{E}$ satisfies $\varepsilon_{\min}>\frac{L_{V_p}}{2}$, where $L_{V_p}$ is the Lipschitz constant of the constraint violation energy function $V_p(\mv{y})$.
+  Then, $V_p(\mv{y}^{(k)})$ asymptotically converges to zero as $k\to \infty$, which implies that $\mv{y}^{(k)}$ converges to the admissible input set $\Omega_u$.
+\end{theorem}
+
+\begin{proof}
+  We first analyze with respect to the $k$-th iteration of the DPL.
+  According to Lemma~\ref{CONAC:lem:proj:Vp:L:smooth}, $V_p(\mv{y}^{(k)})$ is $L$-smooth, which implies 
+  \begin{equation}
+    \label{CONAC:eq:proj:Vp:grad:1}
+    V_p(\mv{y}^{(k+1)})
+    \le
+    V_p(\mv{y}^{(k)})
+    +
+    \nabla V_p(\mv{y}^{(k)})^\top
+    \Delta\mv{y}^{(k)}
+    +
+    \frac{L_{V_p}}{2}
+    \norm{\Delta\mv{y}^{(k)}}^2
+    .
+  \end{equation}
+
+  From \eqref{CONAC:eq:proj:step} and \eqref{CONAC:eq:proj:Vp:grad:simple}, the second and third terms of the right-hand side of \eqref{CONAC:eq:proj:Vp:grad:1} can be rewritten as follows:
+  \begin{equation}
+    \label{CONAC:eq:proj:Vp:grad:step}
+    \nabla V_p(\mv{y}^{(k)})^\top
+    \Delta\mv{y}^{(k)}
+    =
+    -\mv{r}^{(k)\top}
+    \mm{H}_c^{(k)}
+    \left(
+      \mm{H}_c^{(k)}
+      +\mm{E}
+    \right)^{-1}
+    \mv{r}^{(k)}
+    ,
+  \end{equation} 
+  and
+  \begin{equation}
+    \label{CONAC:eq:proj:Vp:grad:norm}
+    \frac{L_{V_p}}{2}
+    \norm{\Delta\mv{y}^{(k)}}^2
+    =
+    \frac{L_{V_p}}{2}
+    \mv{r}^{(k)\top}
+    \left(
+      \mm{H}_c^{(k)}
+      +\mm{E}
+    \right)^{-1}
+    \mm{H}_c^{(k)}
+    \left(
+      \mm{H}_c^{(k)}
+      +\mm{E}
+    \right)^{-1}
+    \mv{r}^{(k)}
+    ,
+  \end{equation}
+  where $\mv{r}^{(k)}:=\mv{r}(\mv{y}^{(k)})$ and $\mm{H}_c^{(k)}:=\mm{H}_c(\mv{y}^{(k)})$.
+  By substituting \eqref{CONAC:eq:proj:Vp:grad:step} and \eqref{CONAC:eq:proj:Vp:grad:norm} into \eqref{CONAC:eq:proj:Vp:grad:1}, we have
+  \begin{equation}
+    \label{CONAC:eq:proj:Vp:grad:2}
+    V_p(\mv{y}^{(k)})
+    -
+    V_p(\mv{y}^{(k+1)})
+    \ge
+    \mv{r}^{(k)\top}
+    \mm{H}_c^{(k)}
+    \left(
+      \mm{H}_c^{(k)}
+      +\mm{E}
+    \right)^{-1}
+    \mv{r}^{(k)}
+    -
+    \frac{L}{2}
+    \mv{r}^{(k)\top}
+    \left(
+      \mm{H}_c^{(k)}
+      +\mm{E}
+    \right)^{-1}
+    \mm{H}_c^{(k)}
+    \left(
+      \mm{H}_c^{(k)}
+      +\mm{E}
+    \right)^{-1}
+    \mv{r}^{(k)}
+    .
+  \end{equation}
+
+  Let $\mm{H}_c^{(k)}=\mm{Q}^{(k)}\mm{\Gamma}^{(k)}{\mm{Q}^{(k)}}^\top$ be the eigenvalue decomposition of $\mm{H}_c^{(k)}$, where $\mm{Q}^{(k)}$ is an orthogonal matrix and $\mm{\Gamma}^{(k)}=\mydiag(\gamma_1^{(k)}, \gamma_2^{(k)}, \ldots, \gamma_n^{(k)})$ is a diagonal matrix containing the eigenvalues of $\mm{H}_c^{(k)}$.
+  By defining $\mv{z}^{(k)}:={\mm{Q}^{(k)}}^\top\mv{r}^{(k)}$, we have
+  \begin{align}
+    \label{CONAC:eq:proj:Vp:grad:3} \nonumber
+    V_p(\mv{y}^{(k)})
+    -
+    V_p(\mv{y}^{(k+1)})
+    \ge &
+    \sum_{i=1}^{n}
+    \frac{\gamma_i^{(k)}}{\gamma_i^{(k)} + \varepsilon_i}
+    (z_i^{(k)})^2
+    -
+    \frac{L_{V_p}}{2}
+    \sum_{i=1}^{n}
+    \frac{
+      \gamma_i^{(k)}
+    }{
+      \left(
+        \gamma_i^{(k)} + \varepsilon_i
+      \right)^2
+    }
+    (z_i^{(k)})^2
+    \\ 
+    = &
+    \sum_{i=1}^{n}
+    \left(
+      \gamma_i^{(k)}
+      \frac{1}{\gamma_i^{(k)}+\varepsilon_i}
+      -
+      \frac{
+        L_{V_p}
+      }{
+        2
+        \left(
+          \gamma_i^{(k)}+\varepsilon_i
+        \right)^2
+      }
+    \right)
+    (z_i^{(k)})^2
+    ,
+  \end{align}
+  where $z_i^{(k)}$ is the $i$-th element of $\mv{z}^{(k)}$.
+
+  To evaluate the right-hand side of \eqref{CONAC:eq:proj:Vp:grad:3}, we introduce new variables $\xi_i^{(k)}:=\frac{1}{\gamma_i^{(k)}+\varepsilon_i}$.
+  The term $\frac{1}{\gamma_i^{(k)}+\varepsilon_i}$ is bounded, such that
+  \begin{equation}
+    0
+    <
+    \frac{1}{\overline{J}^2+\varepsilon_{\max}}
+    \le
+    \xi_i^{(k)}
+    \le
+    \frac{1}{\varepsilon_{\min}}
+    ,
+  \end{equation}
+  where $\varepsilon_{\min}$ and $\varepsilon_{\max}$ are the minimum and maximum eigenvalues of the damping matrix $\mm{E}$, respectively.
+  Then, let 
+  $
+    \eta(\xi_i^{(k)})
+    :=
+    \xi_i^{(k)}
+    \left(
+      1 - \frac{L_{V_p}}{2}\xi_i^{(k)}
+    \right)
+  $ be a function of $\xi_i^{(k)}$.
+  Since $\eta(\xi_i^{(k)})$ is a concave function of $\xi_i^{(k)}$, the minimum value of $\eta(\xi_i^{(k)})$ is obtained at the boundary of $\xi_i^{(k)}$, which implies that there exists a positive constant $\underline{\eta}\in\R_{>0}$ such that
+  \begin{equation}
+    \underline{\eta}
+    =
+    \min
+    \left\{
+      \frac{1}{\varepsilon_{\min}}
+      -
+      \frac{L_{V_p}}{2\varepsilon_{\min}^2}
+      ,\quad
+      \frac{1}{\overline{J}^2+\varepsilon_{\max}}
+      -
+      \frac{L_{V_p}}{2(\overline{J}^2+\varepsilon_{\max})^2}
+    \right\}
+    \le
+    \eta(\xi_i^{(k)})
+    ,
+    \qquad
+    \forall i\in\{1,2,\ldots,n\}
+    .
+  \end{equation}
+  It should be noted that by the assumption of $\varepsilon_{\min}>\frac{L_{V_p}}{2}$, we have $\underline{\eta}>0$.
+
+  Then, from Lemma~\ref{CONAC:lem:proj:Vp:lower:bound}, \eqref{CONAC:eq:proj:Vp:grad:3} can be further bounded as follows:
+  \begin{equation}
+    \label{CONAC:eq:proj:Vp:grad:4}
+    V_p(\mv{y}^{(k)})
+    -
+    V_p(\mv{y}^{(k+1)})
+    \ge
+    \underline{\eta}
+    \mv{r}^{(k)\top}{\mm{H}_c^{(k)}}^\top\mv{r}^{(k)}
+    =
+    \underline{\eta}
+    \norm{\nabla V_p(\mv{y}^{(k)})}^2
+    \ge
+    2\underline{\eta}\mu
+    \left(
+      V_p(\mv{y}^{(k)})
+      -
+      V_p^*
+    \right)
+    .
+  \end{equation}
+
+  By subtracting $V_p(\mv{y}^*)=0$ to the right side of \eqref{CONAC:eq:proj:Vp:grad:4}, it can be rearranged, as follows:
+  \begin{equation}
+    \label{CONAC:eq:proj:Vp:grad:5}
+    V_p(\mv{y}^{(k+1)}) - V_p(\mv{y}^*)
+    \le
+    (1-2\underline{\eta}\mu)
+    \left(
+      V_p(\mv{y}^{(k)}) - V_p(\mv{y}^*)
+    \right) 
+    .
+  \end{equation}
+  By recursively applying \eqref{CONAC:eq:proj:Vp:grad:5} from $k=0$ to $k=K-1$, we have
+  \begin{equation}
+    \label{CONAC:eq:proj:Vp:grad:6}
+    V_p(\mv{y}^{(K)}) - V_p(\mv{y}^*)
+    \le
+    (1-2\underline{\eta}\mu)^K
+    \left(
+      V_p(\mv{y}^{(0)}) - V_p(\mv{y}^*)
+    \right)
+    .
+  \end{equation}
+
+  The term $(1-2\underline{\eta}\mu)$ satisfies $0<1-2\underline{\eta}\mu<1$.
+  The maximum value of $\eta(\xi_i^{(k)})$ is obtained at $\xi_i^{(k)}=\frac{1}{L_{V_p}}$, which implies that $0<\underline{\eta}\le\max_{i}\eta(\xi_i^{(k)})=\frac{1}{2L_{V_p}}$.
+  According to Lemma~\ref{PRE:lem:lib:grad:bound:PL}, we have $\mu\le L_{V_p}$, resulting in $\underline{\eta}\le\frac{1}{2\mu}\implies 2\underline{\eta}\mu\le 1$.
+  Therefore, the constraint violation energy function $V_p(\mv{y}^{(K)})$ converges to zero as $K\to\infty$, while $\mv{y}^{(K)}$ converges to $\Omega_u$, which is exponentially fast.
+
+  Furthermore, since the constraint violation energy function $V_p(\mv{y}^{(K)})$ is monotonically decreasing and bounded below by $V_p(\mv{y}^*)=0$, the steps of the DPL remain in a compact convex set $\Omega$, which justifies the assumption of the compact convex set $\Omega$.
+
+\end{proof}
+
+\begin{cor}[Finite-iteration convergence of the DPL]
+  \label{CONAC:cor:proj:finite:step}
+  Suppose that the conditions of Theorem~\ref{CONAC:thm:proj:convergence} hold.
+  Then, for any small prescribed tolerance $\overline{V}_p\in\R_{>0}$, the DPL satisfies
+  \begin{equation}
+    V_p(\mv{y}^{k}) - V_p^*
+    \le
+    \overline{V}_p
+    ,
+  \end{equation}
+  after a finite iteration $K$ of linearized projection, where
+  \begin{equation}
+    K
+    \ge
+    \max\left\{
+      0,
+      \,
+      \frac{
+        \log\!\left(V_p(y^{(0)})/\overline{V}_p\right)
+      }{
+        -\log(1-2\underline{\eta}\rho)
+      }
+    \right\}.
+  \end{equation}
+\end{cor}
+
+\begin{proof}
+
+  To achieve finite-iteration convergence of the DPL, we relax the convergence condition to $V_p(\mv{y}^{(K)})\le \overline{V}_p$ for a small tolerance $\overline{V}_p\in\R_{>0}$ at the $K$-th iteration.
+  Then, from \eqref{CONAC:eq:proj:Vp:grad:6}, we have
+  \begin{equation}
+    \label{CONAC:eq:proj:Vp:grad:7}
+    V_p(\mv{y}^{(K)}) - V_p(\mv{y}^*)
+    \le
+    (1-2\underline{\eta}\rho)^K
+    \left(
+      V_p(\mv{y}^{(0)}) - V_p(\mv{y}^*)    
+    \right)
+    \le
+    \overline{V}_p
+    .
+  \end{equation}
+  By taking the logarithm to \eqref{CONAC:eq:proj:Vp:grad:7}, and invoking $V_p(\mv{y}^*)=0$ and $\log(1-2\underline{\eta}\rho)<0$, we have
+  \begin{equation}
+    \label{CONAC:eq:proj:Vp:grad:8}
+    K
+    \ge
+    \frac{
+      \log(V_p(\mv{y}^{(0)})/\overline{V}_p)
+    }{
+      -\log(1-2\underline{\eta}\rho)
+    }
+    .
+  \end{equation}
+  Therefore, for a given tolerance $\overline{V}_p\in\R_{>0}$, there exists a finite number of iterations $K$ such that $V_p(\mv{y}^{(K)})\le \overline{V}_p$.
+\end{proof}
+
+The tolerance $r_\mathrm{tol}$ introduced in Section~\ref{CONAC:sec:DNN:arch:DPL} can be determined based on the prescribed tolerance $\overline{V}_p$ in Corollary~\ref{CONAC:cor:proj:finite:step}, as follows:
+\begin{equation}
+  \label{CONAC:eq:proj:r:tol}
+  r_\mathrm{tol}
+  =
+  \sqrt{2\overline{V}_p}
+  .
+\end{equation}
+
+We present the following remark regarding the relaxed convergence condition of the DPL.
+
+\begin{remark}[Selection of the number of iterations $K$ of the DPL]
+  According to \eqref{CONAC:eq:proj:Vp:grad:8} in Corollary~\ref{CONAC:cor:proj:finite:step}, the number of iterations $K$ can be determined based on the prescribed tolerance $\overline{V}_p$ and the eigenvalues of the damping matrix $\mm{E}$.
+  For instance, if $\overline{V}_p$ increases, the number of iterations $K$ required for convergence decreases.
+  On the other hand, by decreasing the eigenvalues of $\mm{E}$ resulting in smaller $\varepsilon_{\min}$ and $\varepsilon_{\max}$, the number of steps $K$ can be reduced, as $\underline{\eta}$ increases.
+\end{remark}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % PROPOSED METHOD
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Proposed Method}
+\section{Hard-Constrained Optimization-Based Neuro-Adaptive Control (Hard-CONAC)}
 \label{CONAC:sec:proposed:method}
 
 \begin{figure}[t]
@@ -298,14 +978,14 @@ Finally, when the infinite norm of the constraint residual $\mv{r}^{(k)}$ is les
     figs/general_figs/HardCONAC.drawio.pdf
   }
   \caption{
-  Overall architecture of the proposed Hard-CONAC.
+  Overall architecture of the Hard-CONAC.
   }
   \label{CONAC:fig:proposed:arch}
 \end{figure}
 
 
-In this section, we present the proposed Hard-CONAC architecture, which integrates the HardNet++ framework with the CONAC approach.
-The overall architecture of the proposed Hard-CONAC is illustrated in Fig.~\ref{CONAC:fig:proposed:arch}.
+In this section, we present the Hard-CONAC architecture, which integrates the HardNet++ framework with the CONAC approach.
+The overall architecture of the Hard-CONAC is illustrated in Fig.~\ref{CONAC:fig:proposed:arch}.
 
 % —————————————————————————————————————————————————————
 % PROPOSED METHOD: NAC formulation
@@ -313,7 +993,7 @@ The overall architecture of the proposed Hard-CONAC is illustrated in Fig.~\ref{
 \subsection{Neuro-Adaptive Control Formulation}
 
 In this section, the NAC formulation is presented.
-First, the error dynamics $\mv{e}:=\mv{x}-\mv{x}_d$ is defined, and the error dynamics is rewritten as follows:
+First, the error dynamics $\mv{e}:=\mv{x}-\mv{x}_d$ is obtained, as follows:
 \begin{equation}
   \label{CONAC:eq:err:dyn}
   \ddtt\mv{e}
@@ -359,13 +1039,8 @@ Invoking Assumptions~\ref{CONAC:assum:B:bound:grad}, the time derivative of $V_c
   \Delta\mv{u}
   ,
 \end{align}
-where the arguments of $\mv{f}(\mv{x})$ and $\mm{B}(\mv{x})$ are omitted for brevity and $\Delta\mv{u} := \mysat(\mv{u}) - \mv{u}$.
+where the arguments of $\mv{f}(\mv{x})$ and $\mm{B}(\mv{x})$ are omitted for brevity, and $\Delta\mv{u}:=\mysat(\mv{u}) - \mv{u}$ denotes the input saturation error.
 
-Notably, as shown in the previous section, the proposed Hard-CONAC architecture ensures that the control input $\mv{u}$ always satisfies the input constraints, resulting in 
-\begin{equation}
-  \Delta\mv{u} = \mv{0}
-  .
-\end{equation}
 Therefore, the time derivative of the Lyapunov function candidate $V_c$ can be further simplified as follows:
 \begin{equation} \label{CONAC:eq:Vc:dot:2}
   \ddtt V_c
@@ -376,6 +1051,9 @@ Therefore, the time derivative of the Lyapunov function candidate $V_c$ can be f
   \left(
     \mv{f}- \ddtt\mv{x}_d
   \right)
+  +
+  \mv{e}^\top
+  \Delta\mv{u}
   .
 \end{equation}
 
@@ -394,13 +1072,13 @@ A desired control law $\mv{u}_d$ such that the tracking error $\mv{e}$ is stable
   \left(
     - \mv{f} 
     + \ddtt\mv{x}_d
+    % +
+    % \mv{h}(\mv{x},\mv{x}_d)
   \right)
-  % +
-  % h(\mv{x},\mv{x}_d)
   ,
 \end{equation}
 where $\underline{p}\mm{I}_n \preceq \mm{P}=\mm{P}^\top \preceq \overline{p}\mm{I}_n$ for known positive constants $\underline{p},\overline{p}\in\R_{>0}$.
-% The function $h:\R^n\times\R^n\to\R^n$ is correction term to satisfy the ideal control law $\mv{u}^*$ within the input constraints, \ie $\mv{u}^*\in\Omega_u$.
+% The function $h:\R^n\times\R^n\to\R^n,\ (\mv{x},\mv{x}_d)\mapsto h(\mv{x},\mv{x}_d)$ is unknown and serves as a correction term to satisfy the ideal control law $\mv{u}^*$ within the input constraints, \ie $\mv{u}_d\in\Omega_u$.
 
 By substituting $\mv{u}_d$ in \eqref{eq:ctrl:ideal} into \eqref{CONAC:eq:Vc:dot:3}, we have
 \begin{align} \label{CONAC:eq:Vc:dot:3} 
@@ -412,8 +1090,15 @@ By substituting $\mv{u}_d$ in \eqref{eq:ctrl:ideal} into \eqref{CONAC:eq:Vc:dot:
   +
   \mv{e}^\top
   \left(
-    \mv{u} - \mv{u}_d
+    \mv{u} 
+    - 
+    \mv{u}_d
+    % -
+    % \mv{h}
   \right)
+  +
+  \mv{e}^\top
+  \Delta\mv{u}
   \\ \nonumber
   \le & 
   -
@@ -423,9 +1108,12 @@ By substituting $\mv{u}_d$ in \eqref{eq:ctrl:ideal} into \eqref{CONAC:eq:Vc:dot:
   \left(
     \mv{u} - \mv{u}_d       
   \right)
+  +
+  \mv{e}^\top
+  \Delta\mv{u}
   .
 \end{align}
-Notably, in the ideal case, \ie $\mv{u} = \mv{u}_d$, the tracking error $\mv{e}$ asymptotically converges to zero with decay rate $\underline{p}\overline{b}$, since 
+Notably, in the ideal case, \ie $\mv{u} = \mv{u}_d$ and $\Delta\mv{u} = \mv{0}$, the tracking error $\mv{e}$ asymptotically converges to zero with decay rate $\underline{p}\overline{b}$, since 
 $
   \tfrac{1}{\overline{b}}
   \ddtt
@@ -443,13 +1131,14 @@ Since the ideal control input $\mv{u}_d$ is unknown due to the unknown system dy
   \label{CONAC:eq:ctrl:ideal}
   \mv{u}_d
   =
-  \NN(\NNin;\idealwth)
+  \NN_c(\NNin;\idealwth)
   +
   \mv{\epsilon}
   ,
 \end{equation}
 where $\idealwth\in\R^{\Xi}$ is the ideal weight vector, and $\mv{\epsilon}\in\R^n$ is the approximation error of the DNN.
-The ideal weight vector and the approximation error are bounded for a compact set $\Omega_{\NNin}\subset\R^{l_0+1}$ which is also known as the approximation region, as follows:
+The DNN input vector $\NNin\in\R^{\ell_0+1}$ should be designed to include $\mv{x}$, $\mv{x}_d$, and $\ddtt\mv{x}_d$ to ensure that the DNN can approximate the ideal control input $\mv{u}_d$, \eg $\NNin:=(\mv{x}^\top,\mv{x}_d^\top,\ddtt\mv{x}_d^\top,1)^\top$.
+The ideal weight vector and the approximation error are bounded for a compact set $\Omega_{\NNin}\subset\R^{\ell_0+1}$ which is also known as the approximation region, as follows:
 \begin{equation}
   \norm{\idealwth} 
   \le 
@@ -465,7 +1154,7 @@ The ideal weight vector and the approximation error are bounded for a compact se
   \NNin\in\Omega_{\NNin}
   ,
 \end{equation}
-where $\overline{\theta},\overline{\epsilon}\in\R_{>0}$ are unknown positive constants.
+where $\overline{\theta},\overline{\epsilon}\in\R_{>0}$ are unknown positive constants, as discussed in Lemma~\ref{PRE:lem:NN:UAP}.
 
 As the ideal weight vector $\idealwth$ is unknown, we estimate it using the weight vector $\estwth\in\R^{\Xi}$, which is updated online using the adaptation law derived in the subsequent section.
 The actual control input $\mv{u}$ is then defined as follows:
@@ -473,9 +1162,12 @@ The actual control input $\mv{u}$ is then defined as follows:
   \label{CONAC:eq:ctrl:actual}
   \mv{u}
   =
-  \NN(\NNin;\estwth)
+  \NN_c(\NNin;\estwth)
   =
-  \Pi\left(\NN_u(\NNin;\estwth)\right)
+  \mv{\Pi}
+  \left(
+    \NN_u(\NNin;\estwth)
+  \right)
   .
 \end{equation}
 
@@ -487,18 +1179,24 @@ By substituting \eqref{CONAC:eq:ctrl:ideal} and \eqref{CONAC:eq:ctrl:actual} int
   +
   \mv{e}^\top
   \left(
-    \NN(\NNin;\estwth)
+    \NN_c(\NNin;\estwth)
     -
-    \NN(\NNin;\idealwth)
+    \NN_c(\NNin;\idealwth)
     -
     \mv{\epsilon}
   \right)
+  +
+  \mv{e}^\top
+  \Delta\mv{u}
   \\ \nonumber
   \le &
   -\underline{p}\norm{\mv{e}}^2
   +
   \mv{e}^\top
-  \pptfrac{\estNN}{\estwth}\tilde{\wth}
+  \pptfrac{\estNN_c}{\estwth}\tilde{\wth}
+  +
+  \mv{e}^\top
+  \Delta\mv{u}
   +
   \mv{e}^\top
   \underbrace{
@@ -508,9 +1206,9 @@ By substituting \eqref{CONAC:eq:ctrl:ideal} and \eqref{CONAC:eq:ctrl:actual} int
   }_{=:\mv{\Delta}}
   ,
 \end{align}
-where $\tilde{\wth}:=\estwth-\idealwth$ is the weight estimation error, and $\pptfrac{\estNN}{\estwth}$ is the Jacobian of the constrained DNN with respect to the weight vector $\estwth$.
-The high-order term is denoted by $\mathcal{O}(\norm{\tilde\wth})$ and is bounded only if $\norm{\tilde\wth}$ is bounded.
-The term $\mv{\Delta}$ includes the high-order term and the approximation error.
+where $\tilde{\wth}:=\estwth-\idealwth$ is the weight estimation error, and $\pptfrac{\estNN_c}{\estwth}$ is the Jacobian of the constrained DNN with respect to the weight vector $\estwth$ defined in \eqref{PRE:eq:NN:jacobian}.
+The high-order term is denoted by $\mathcal{O}\left(\norm{\tilde\wth}\right)$.
+In addition, the term $\mv{\Delta}$ includes the high-order term and the approximation error and bounded only if $\norm{\tilde\wth}$ is bounded, such that $\norm{\mv{\Delta}}\le\overline{\Delta}$ for a positive constant $\overline{\Delta}\in\R_{>0}$.
 
 % —————————————————————————————————————————————————————
 % PROPOSED METHOD: Adaptation law derivation
@@ -525,14 +1223,14 @@ The constrained control problem stated in Section~\ref{CONAC:sec:problem:formula
     & 
     J(\mv{e};\estwth)
     = 
-    \tfrac{1}{2} \mv{e}^\top \mv{e} 
+    \frac{1}{2} \mv{e}^\top \mv{e} 
     +
-    \tfrac{1}{2} \mv{r}^\top \mv{r}
+    \frac{1}{2} {\mv{r}^{(0)}}^\top \mv{r}^{(0)}
     \label{CONAC:eq:opt:prob:obj} 
     \\ 
     \text{subject to} \quad  
     & 
-    c^{\theta}_i(\estwth_i)=\tfrac{1}{2}
+    c^{\theta}_i(\estwth_i)=\frac{1}{2}
     \left(
       \norm{\estwth_i}^2
       -
@@ -543,40 +1241,74 @@ The constrained control problem stated in Section~\ref{CONAC:sec:problem:formula
     \forall i\in\{0,1,\ldots,L\}
     ,
     \label{CONAC:eq:opt:prob:const1} 
-    \\ 
-    & 
-    \underline{\mv{b}}(\NNin)
-    \leq
-    \mv{c}^u(\NN)
-    \leq
-    \overline{\mv{b}}(\NNin)
-    ,
-    \label{CONAC:eq:opt:prob:const2} 
+    % \\ 
+    % & 
+    % \underline{\mv{b}}(\NNin)
+    % \leq
+    % \mv{c}^u(\NN)
+    % \leq
+    % \overline{\mv{b}}(\NNin)
+    % ,
+    % \label{CONAC:eq:opt:prob:const2} 
   \end{align}%
 \end{subequations}
-where $J(\mv{e};\estwth)$ is the objective function, and $c^{\theta}_i(\estwth_i)$ is the constraint function for the weight vector $\estwth_i$ of the $i$-th layer.
+where $J(\mv{e};\estwth)$ is the objective function, and $c^{\theta}_i(\estwth_i)$ is the constraint function for the weight vector $\estwth_i$ of the $i$-th layer, and $\mv{r}^{(0)}:=\mv{r}(\estNN_u)$ is the residual of the unconstrained DNN output $\estNN_u$ which is initial residual of the DPL ($k=0$).
+The upper limit of the weight vector $\overline{\theta}_i$ is equal to $\idealwth_i$ of the $i$-th layer, as discussed in Lemma~\ref{PRE:lem:NN:UAP}.
 
-The objective function includes the instantaneous tracking error $\mv{e}$ and the constraint residual $\mv{r}$, which is defined in \eqref{CONAC:eq:proj:residual}.
-
-\cred{...}
-
-The adaptation law for the adaptive variables, $\estwth$, and $[\lambda_i]_{j\in\{0,1,\ldots,L\}}$, is derived to solve \eqref{eq:opt:prob:saddle} by using a primal-dual gradient update law, as follows:
+The Lagrangian function $L:=L(\mv{e};\estwth,\mv{\lambda})$ of the constrained optimization problem in \eqref{CONAC:eq:opt:prob} is defined as follows:
+\begin{equation}
+  \label{CONAC:eq:opt:prob:Lagrangian}
+  L(\mv{e};\estwth,\mv{\lambda})
+  :=
+  J(\mv{e};\estwth)
+  +
+  \sum_{i=0}^L
+  \lambda_i 
+c^{\theta}_i(\estwth_i)
+  ,
+\end{equation}
+where $\mv{\lambda}:=[\lambda_i]_{j\in\{0,1,\ldots,L\}}$ is the vector of Lagrange multipliers associated with the constraints in \eqref{CONAC:eq:opt:prob:const1}.
+To solve the constrained optimization problem in \eqref{CONAC:eq:opt:prob}, we consider the following primal-dual problem:
+\begin{equation}
+  \label{CONAC:eq:opt:prob:saddle}
+  \min_{\estwth}
+  \max_{\mv{\lambda}\ge0}
+  L(\mv{e};\estwth,\mv{\lambda})
+  .
+\end{equation}
+  
+The adaptation law for the adaptive variables, $\estwth$, and $\mv{\lambda}$, is derived to solve \eqref{CONAC:eq:opt:prob:saddle} by using a primal-dual gradient update law, as follows:
 \begin{subequations} 
   \label{CONAC:eq:adap}
   \begin{align}
     \ddtt{\estwth}
     &
     = 
-    -\alpha \pptfrac{L}{\estwth}
+    -\alpha \ppfrac{L}{\estwth}
     =
     -\alpha 
     \left(
-      \pptfrac{J}{\estwth}
+      \ppfrac{J}{\estwth}
       +
-      \textstyle\sum_{i=0}^L
+      \sum_{i=0}^L
       \lambda_i 
       \estwth_i
-    \right),
+    \right)
+    \approx
+    -\alpha
+    \left(
+      \ppfrac{\estNN_c}{\estwth}^\top
+      \mv{e}
+      +
+      \ppfrac{\estNN_u}{\estwth}^\top
+      {\mm{J}^{(0)}}^\top
+      \mv{r}^{(0)}
+      +
+      \sum_{i=0}^L
+      \lambda_i 
+      \estwth_i
+    \right)
+    ,
     \label{CONAC:eq:adap:th}
     \\
     \ddtt\lambda_i
@@ -585,7 +1317,7 @@ The adaptation law for the adaptive variables, $\estwth$, and $[\lambda_i]_{j\in
     \myproj_{\lambda_i\ge0}
     \left(
       \beta_i
-      \pptfrac{L}{\lambda_i}
+      \ppfrac{L}{\lambda_i}
     \right)
     =
     \myproj_{\lambda_i\ge0}
@@ -598,16 +1330,264 @@ The adaptation law for the adaptive variables, $\estwth$, and $[\lambda_i]_{j\in
     \label{CONAC:eq:adap:lbd}
   \end{align}%
 \end{subequations}
+where $\mm{J}^{(0)}=\ppfrac{\mv{c}(\estNN_u)}{\estNN_u}$.
+
+$\myproj_{\lambda_i\ge0}(\cdot)$ is the projection operator to ensure that $\lambda_i$ remains non-negative, and $\alpha,\beta_i\in\R_{>0}$ are the adaptation gain (learning rate) of the DNN weight and update rate of the Lagrange multiplier $\lambda_i$, respectively.
+
+In \eqref{CONAC:eq:adap:th}, the sensitivity $\ppfrac{\mv{e}}{\mv{u}}$ of the error with respect to the control input in $\ppfrac{\mv{e}}{\estwth}$ is approximated using the sign-definite property of the control effectiveness matrix $\mm{B}(\mv{x})$ in Assumption~\ref{CONAC:assum:B:bound:grad}.
+In the context of the adaptive control, the sensitivity $\ppfrac{\mv{e}}{\mv{u}}$ is difficult to compute, thereby, the approximation of $\ppfrac{\mv{e}}{\mv{u}}$ is commonly used in the literature by using the sign of each entry of $\mm{B}(\mv{x})$.
+However, according to Assumption~\ref{CONAC:assum:B:bound:grad}, the sign of each entry of $\mm{B}(\mv{x})$ is known, but the sign-definiteness of $\mm{B}(\mv{x})$ is unknown.
+Thus, without loss of generality, we assume that $\mm{B}(\mv{x})$ is positive definite, and the sensitivity $\ppfrac{\mv{e}}{\mv{u}}$ is approximated as $\ppfrac{\mv{e}}{\mv{u}}\approx\mm{I}_n$, resulting in 
+\begin{equation}
+  \ppfrac{\mv{e}}{\estwth}
+  \approx
+  \ppfrac{\estNN}{\estwth}
+  \implies
+  \ppfrac{}{\estwth}
+  \left(
+    \frac{1}{2}\mv{e}^\top\mv{e}
+  \right)
+  =
+  \ppfrac{\estNN_c}{\estwth}^\top
+  \ppfrac{\mv{u}}{\estNN_c}^\top
+  \ppfrac{\mv{e}}{\mv{u}}^\top
+  \mv{e}
+  \approx
+  \ppfrac{\estNN_c}{\estwth}^\top
+  \mv{e}
+\end{equation}
+as shown in \eqref{CONAC:eq:adap:th}.
+
+The gradient of $\frac{1}{2}{\mv{r}^{(0)}}^\top \mv{r}^{(0)}$ with respect to the weight vector $\estwth$ is computed using the chain rule, as follows:
+\begin{equation}
+  \ppfrac{\left(\frac{1}{2}{\mv{r}^{(0)}}^\top \mv{r}^{(0)}\right)}{\estwth}
+  =
+  \ppfrac{\mv{r}^{(0)}}{\estwth}^\top
+  \mv{r}^{(0)}
+  =
+  \ppfrac{\estNN_u}{\estwth}^\top
+  {\mm{J}^{(0)}}^\top
+  \mm{D}(\estNN_u)^\top
+  \mv{r}^{(0)}
+  =
+  \ppfrac{\estNN_u}{\estwth}^\top
+  {\mm{J}^{(0)}}^\top
+  \mv{r}^{(0)}
+  ,
+\end{equation}
+where $\mm{D}(\estNN_u)$ is the Jacobian of $\myReLU$ with respect to $\estNN_u$ defined in \eqref{CONAC:eq:proj:Vp:grad:ReLU}.
 
 % —————————————————————————————————————————————————————
 % PROPOSED METHOD: FORWARD-MODE AUTOMATIC DIFFERENTIATION
 % —————————————————————————————————————————————————————
 \subsubsection{Forward-Mode Automatic Differentiation for DPL}
 
-As shown in the previous section, it is not straightforward to compute the gradient of the constrained DNN $\NN$ with respect to its input, \ie the unconstrained DNN $\NN_u$, due to the projection operator $\Pi(\cdot)$.
-We adopt the forward-mode automatic differentiation technique \cite[Chap. 8.2]{Nocedal:2006aa} to compute the gradient of the each projection layers in the DPL.
+In this section, the computation of the gradient $\ppfrac{\mv{\Pi}}{\NN_u}$ of the DPL with respect to its input is presented.
+Since the linearized projection in \eqref{CONAC:eq:proj:step} includes inverse of the gram matrix $\mm{H}_c^{(k)}$, it is not straightforward to analytically compute $\ppfrac{\mv{\Pi}}{\NN_u}$ using the chain rule.
+Therefore, we adopt the forward-mode automatic differentiation technique \cite[Chap. 8.2]{Nocedal:2006aa} to compute the gradient of the each iteration in the DPL with respect to its input.
 
-First, 
+Consider step $k$ in the DPL, and rewrite the linearized projection iteration in \eqref{CONAC:eq:proj:step} as follows:
+\begin{equation}
+  \label{CONAC:eq:proj:step:2}
+  \mv{y}^{(k+1)}
+  =
+  \mv{y}^{(k)}
+  -
+  {\mm{J}_c^{(k)}}^{\top}
+  \mv{\alpha}_c^{(k)}
+  ,
+\end{equation}
+where $\mv{\alpha}_c^{(k)}:={\mm{H}_c^{(k)}}^{-1}\mv{r}^{(k)}$ with $\mm{H}^{(k)}:=\mm{J}^{(k)}{\mm{J}^{(k)}}^{\top}+\mm{E}$.
+
+
+Let $\der\mv{y}^{(k)}$ denote an arbitrary perturbation of the input to the $k$th projection step. Taking the differential of \eqref{CONAC:eq:proj:step:2} gives
+\begin{equation}
+  \label{CONAC:eq:proj:dy}
+  \der\mv{y}^{(k+1)}
+  =
+  \der\mv{y}^{(k)}
+  -
+  {\der\mm{J}_c^{(k)}}^{\top}
+  \mv{\alpha}_c^{(k)}
+  -
+  {\mm{J}_c^{(k)}}^{\top}
+  \der\mv{\alpha}_c^{(k)}.
+\end{equation}
+The differential $\der\mv{\alpha}_c^{(k)}$ is obtained without explicitly differentiating the matrix inverse. 
+From $\mm{H}_c^{(k)}\mv{\alpha}_c^{(k)} = \mv{r}^{(k)}$, we obtain
+$
+  \der\mm{H}_c^{(k)}\mv{\alpha}_c^{(k)}
+  +
+  \mm{H}_c^{(k)}\der\mv{\alpha}_c^{(k)}
+  =
+  \der\mv{r}^{(k)}
+  .
+$
+Therefore,
+\begin{equation}
+  \label{CONAC:eq:proj:dalpha}
+  \der\mv{\alpha}_c^{(k)}
+  =
+  {\mm{H}_c^{(k)}}^{-1}
+  \left(
+    \der\mv{r}^{(k)}
+    -
+    \der\mm{H}_c^{(k)}\mv{\alpha}_c^{(k)}
+  \right).
+\end{equation}
+
+Since the damping matrix $\mm{E}$ is constant, the differential of
+$\mm{H}_c^{(k)}$ is
+\begin{equation}
+  \label{CONAC:eq:proj:dH}
+  \der\mm{H}_c^{(k)}
+  =
+  \der\mm{J}_c^{(k)}{\mm{J}_c^{(k)}}^{\top}
+  +
+  \mm{J}_c^{(k)}
+  {\der\mm{J}_c^{(k)}}^{\top}.
+\end{equation}
+Furthermore, let
+$
+  \mm{D}^{(k)}
+  :=
+  \left.
+  \frac{\partial\mv{r}}{\partial\mv{c}}
+  \right|_{\mv{c}=\mv{c}(\mv{y}^{(k)})}
+$
+denote the jacobian of $\myReLU$ with respect to the constraint function $\mv{c}$ evaluated at $\mv{y}^{(k)}$, as defined in \eqref{CONAC:eq:proj:Vp:grad:ReLU}. 
+Consequently, the residual differential is
+\begin{equation}
+  \label{CONAC:eq:proj:dr}
+  \der\mv{r}^{(k)}
+  =
+  \mm{D}^{(k)}
+  \mm{J}_c^{(k)}
+  \der\mv{y}^{(k)}.
+\end{equation}
+
+The directional differential of the constraint Jacobian is given by
+\begin{equation}
+  \label{CONAC:eq:proj:dJ}
+  \der\mm{J}_c^{(k)}
+  =
+  \begin{bmatrix}
+    \left(
+      \nabla^2 c_1(\mv{y}^{(k)})
+      \der\mv{y}^{(k)}
+    \right)^{\top}
+    \\
+    \vdots
+    \\
+    \left(
+      \nabla^2 c_{n_c}(\mv{y}^{(k)})
+      \der\mv{y}^{(k)}
+    \right)^{\top}
+  \end{bmatrix},
+\end{equation}
+where $\nabla^2 c_i(\mv{y}^{(k)})$ is the Hessian of the $i$th constraint function evaluated at $\mv{y}^{(k)}$.
+Substitution of \eqref{CONAC:eq:proj:dH}--\eqref{CONAC:eq:proj:dJ} into \eqref{CONAC:eq:proj:dalpha}, followed by substitution into \eqref{CONAC:eq:proj:dy}, yields the directional derivative of the $k$-th linearized projection iteration.
+
+Define the one-step Jacobian as
+\begin{equation}
+  \label{CONAC:eq:proj:Ak}
+  \mm{A}^{(k)}
+  :=
+  \frac{
+    \partial\mv{y}^{(k+1)}
+  }{
+    \partial\mv{y}^{(k)}
+  }
+  .
+\end{equation}
+To construct $\mm{A}^{(k)}$ using forward-mode automatic differentiation, the standard basis vectors are used as seed directions.
+Specifically, for each $j=1,\ldots,n_u$, we set
+\begin{equation}
+  \der\mv{y}^{(k)}=\mv{e}_j
+\end{equation}
+and evaluate $\der\mv{y}^{(k+1)}$ using \eqref{CONAC:eq:proj:dy}. 
+The resulting differential satisfies
+\begin{equation}
+  \der\mv{y}^{(k+1)}
+  =
+  \mm{A}^{(k)}\mv{e}_j
+  =
+  \mm{A}^{(k)}_{:,j}
+  ,
+\end{equation}
+and therefore corresponds to the $j$th column of the one-step Jacobian. 
+Repeating this procedure for all standard basis vectors provides the complete Jacobian $\mm{A}^{(k)}$.
+
+Finally, let
+\begin{equation}
+  \mm{G}^{(k)}
+  :=
+  \frac{
+    \partial\mv{y}^{(k)}
+  }{
+    \partial\mv{y}^{(0)}
+  }
+  ,
+\end{equation}
+denote the accumulated sensitivity from the input of the DPL to its $k$th iterate. Since $\mv{y}^{(0)}=\NN_u$, its initial value is $\mm{G}^{(0)}=\mm{I}$.
+The chain rule gives the forward sensitivity recursion
+$
+  \mm{G}^{(k+1)}
+  =
+  \mm{A}^{(k)}\mm{G}^{(k)}
+  .
+$
+Hence, after $K$ linearized projection steps, the Jacobian of the finite-step DPL is
+\begin{equation}
+  \label{CONAC:eq:DPL:Jacobian}
+  \frac{
+    \partial\mv{\Pi}(\NN_u)
+  }{
+    \partial\NN_u
+  }
+  =
+  \mm{G}^{(K)}
+  =
+  \mm{A}^{(K-1)}
+  \mm{A}^{(K-2)}
+  \cdots
+  \mm{A}^{(0)}
+  .
+\end{equation}
+Accordingly, the Jacobian of the constrained DNN output with respect to the neural-network parameters $\estwth$ is obtained as
+\begin{equation}
+  \label{CONAC:eq:DPL:theta:Jacobian}
+  \frac{
+    \partial\estNN_c
+  }{
+    \partial\estwth
+  }
+  =
+  \frac{
+    \partial\mv{\Pi}(\NN_u)
+  }{
+    \partial\estwth
+  }
+  =
+  \frac{
+    \partial\mv{\Pi}(\NN_u)
+  }{
+    \partial\NN_u
+  }
+  \frac{
+    \partial\NN_u
+  }{
+    \partial\estwth
+  }
+  =
+  \mm{G}^{(K)}
+  \frac{
+    \partial\NN_u
+  }{
+    \partial\estwth
+  }
+  .
+\end{equation}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % STABILITY ANALYSIS
@@ -615,66 +1595,258 @@ First,
 \section{Stability Analysis}
 \label{CONAC:sec:stability:analysis}
 
-In this section, the closed-loop stability under the proposed Hard-CONAC is analyzed.
+In this section, the closed-loop stability under the Hard-CONAC is analyzed.
+The following lemmas are presented, followed by the main theorem of the stability analysis.
 
-\begin{theorem} \label{thm:stability}
-  \cred{add theorem statement}
-  % Consider the closed-loop system consisting of \eqref{eq:sys}, the control law \eqref{eq:ctrl:NN:actual}, and the adaptation law \eqref{eq:adap}.
-  % Suppose that Assumptions~\ref{assum:B:bound}--\ref{assum:xd} hold and the initial condition belongs to the compact invariant set 
-  % $
-  % \prod_{\ell=0}^k \mathcal{S}_\ell(\overline V_\ell)
-  % $ 
-  % constructed in \eqref{eq:Sk:def} and \eqref{eq:Si:def}.
-  % Then, the tracking error $\mv e$, the DNN weights $\estwth$, and the Lagrange multipliers $\sigma_i,\ \forall i \in \mathcal{K},$ and $\lambda_j,\ \forall j \in \mathcal{I},$ are uniformly ultimately bounded.
+\begin{lem}[Bounded saturation error $\Delta\mv{u}$ after finite-iteration convergence of the DPL]
+  \label{CONAC:lem:proj:sat:err:bound}
+  Let $\NN_u$ be the output of the unconstrained DNN and $\mv{u}=\NN_c=\Pi(\NN_u)$ be the constrained control input by the DPL.
+  Then, the saturation error $\Delta\mv{u}=\mysat(\mv{u}) - \mv{u}$ is bounded by
+  \begin{equation}
+    \norm{\Delta\mv{u}}
+    \leq
+    \sqrt{\frac{2\overline{V}_p}{\mu}}
+    .
+  \end{equation}
+\end{lem}
+
+\begin{proof}
+
+  According to Corollary~\ref{CONAC:cor:proj:finite:step}, the output $\mv{u}$ of
+  the DPL with the relaxed convergence condition satisfies
+  \begin{equation}
+    V_p(\mv{u})\le\overline{V}_p,
+    \qquad
+    \norm{\mv{r}(\mv{u})}
+    \le
+    \sqrt{2\overline{V}_p}.
+  \end{equation}
+  Accordingly, define the relaxed admissible input set as
+  \begin{equation}
+    \label{CONAC:eq:proj:relaxed:admissible}
+    \Omega_u^r(\overline{V}_p)
+    :=
+    \left\{
+      \mv{u}\in\R^{n}
+      :
+      V_p(\mv{u})\le\overline{V}_p
+    \right\}
+    =
+    \left\{
+      \mv{u}\in\R^{n}
+      :
+      \norm{\mv{r}(\mv{u})}
+      \le
+      \sqrt{2\overline{V}_p}
+    \right\}
+    .
+  \end{equation}
+  Since $V_p(\mv{y})=0,\ \forall\mv{y}\in\Omega_u$, it follows that
+  \begin{equation}
+    \Omega_u
+    \subset
+    \Omega_u^r(\overline{V}_p)
+    .
+  \end{equation}
+
+  Now, the distance from $\mv{u}$ to $\Omega_u$ is evaluated.
+  Let $\mv{\xi}:=\mv{\xi}(s)$ be a continuous curve connecting $\mv{u}$ and a point $\mv{v}\in\Omega_u$, and parameterized by $s\in[0,1]$, such that $\mv{\xi}(0)=\mv{u}$ and $\mv{\xi}(1)=\mv{v}$.
+  In addition, let $\ddtfrac{\mv{\xi}}{s}:=-\nabla V_p(\mv{\xi}(s))$ denotes the tangent vector of the curve $\mv{\xi}(s)$.
+  The length $L$ of the curve $\mv{\xi}(s)$ is given by
+  \begin{equation}
+    L
+    :=
+    \int_0^1
+    \norm{\ddfrac{\mv{\xi}}{s}}
+    \,
+    \der s
+    =
+    \int_0^1
+    \norm{\nabla V_p(\mv{\xi}(s))}
+    \,
+    \der s
+    .
+  \end{equation}
+
+  Then, by taking the derivative of $V_p(\mv{\xi}(s))$ with respect to $s$, we have
+  \begin{equation}
+    \ddfrac{}{s}
+    V_p(\mv{\xi})
+    =
+    \nabla V_p(\mv{\xi})^\top
+    \ddfrac{\mv{\xi}}{s}
+    =
+    -\norm{\nabla V_p(\mv{\xi})}^2
+    .
+  \end{equation}
+  By rearranging the above equation, we have
+  \begin{equation}
+    \int_{V_p(\mv{v})}^{V_p(\mv{u})}
+    \frac{1}{\norm{\nabla V_p(\mv{\xi})}}
+    \,
+    \der V_p(\mv{\xi})
+    =
+    \int_0^1
+    \norm{\nabla V_p(\mv{\xi})}
+    \,
+    \der s
+    =
+    L
+    .
+  \end{equation}
+  From \eqref{CONAC:eq:proj:Vp:PL} in Lemma~\ref{CONAC:lem:proj:Vp:lower:bound}, we have $\tfrac{1}{\sqrt{2\mu V_p(\mv{\xi})}}\ge\tfrac{1}{\norm{\nabla V_p(\mv{\xi})}}$.
+  Therefore, the length $L$ of the curve $\mv{\xi}(s)$ is bounded as follows:
+  \begin{equation}
+    L
+    \le
+    \int_{V_p(\mv{v})}^{V_p(\mv{u})}
+    \frac{1}{\sqrt{2\mu V_p(\mv{\xi})}}
+    \,
+    \der V_p(\mv{\xi})
+    =
+    \frac{1}{\mu} \sqrt{2\mu V_p(\mv{u})}
+    \le
+    \sqrt{\frac{2 \overline{V}_p}{\mu}}
+    ,
+    \qquad
+    \because
+    V_p(\mv{v})=0
+    .
+  \end{equation}
+
+  According to the definition of the saturation function in Assumption~\ref{CONAC:assum:sat}, the saturation error $\Delta\mv{u}$ is bounded as follows:
+  \begin{equation}
+    \norm{\Delta\mv{u}}
+    =
+    \min_{\mv{v}\in\Omega_u}
+    \norm{\mv{v} - \mv{u}}
+    \le
+    \norm{\mv{v} - \mv{u}}
+    .
+  \end{equation}
+  Moreover, since $L$ is greater than or equal to the distance $\norm{\mv{v} - \mv{u}}$ from $\mv{u}$ to $\mv{v}\in\Omega_u$, we have
+  \begin{equation}
+    \norm{\Delta\mv{u}}
+    \le
+    \sqrt{\frac{2 \overline{V}_p}{\mu}}
+    .
+  \end{equation}
+
+\end{proof}
+
+\begin{remark}[Bounded input saturation error $\Delta\mv{u}$ induced by the DPL]
+  With infinite iterations of the DPL, the output of the DPL converges to the admissible input set $\Omega_u$, which implies that the saturation error $\Delta\mv{u}$ is zero.
+  However, in practice, the DPL is implemented with a finite number of iterations $K$, which results in a non-zero saturation error $\Delta\mv{u}$, as discussed in Lemma~\ref{CONAC:lem:proj:sat:err:bound}.
+  The bound of $\Delta\mv{u}$ can be adjusted by selecting the prescribed tolerance $\overline{V}_p$.
+  In particular, under strict input saturation constraints, the prescribed tolerance $\overline{V}_p$ should be set to a small value, but this may require a larger number of iterations $K$ to achieve convergence.
+  Besides, if the minimum eigenvalue of the gram matrix $\mm{H}_\mathcal{A}$ of the violated constraints is small, the saturation error $\Delta\mv{u}$ may be large, which requires to decrease $\overline{V}_p$ to reduce the constraint violation.
+\end{remark}
+
+\begin{lem}
+  \label{CONAC:lem:residual:Lipschitz}
+  Consider the constraint vector $\mv{c}(\mv{u})$ satisfying Assumption~\ref{CONAC:assum:c:smooth} and weight vectors $\wth_1,\wth_2\in\Omega_{\theta}\subset\R^\Xi$, where $\Omega_{\theta}$ is a compact set.
+  Then, the residual $\mv{r}(\NN_u(\NNin;\wth))$ of the constraint violation is Lipschitz continuous with respect to the weight vector $\wth$, such that
+  \begin{equation}
+    \exists L_r\in\R_{>0}
+    :
+    \norm{\mv{r}(\NN_u(\NNin;\wth_1))-\mv{r}(\NN_u(\NNin;\wth_2))}
+    \le
+    \overline{J}
+    L_{\NN_u}
+    \norm{\wth_1-\wth_2}
+    ,
+    \qquad
+    \forall \wth_1,\wth_2\in\Omega_{\theta}
+    .
+  \end{equation} 
+\end{lem}
+
+\begin{proof}
+
+  According to Lemma~\ref{PRE:lem:NN:param:Lipschitz}, the unconstrained DNN $\NN_u$ is Lipschitz continuous with respect to its weight vector $\wth$.
+  Moreover, the constraint function $\mv{c}(\mv{y})$ is continuously differentiable with respect to $\mv{y}\in\R^n$ by Assumption~\ref{CONAC:assum:c:smooth}, and the gradient of the residual $\mv{r}(\mv{y})$ with respect to $\mv{y}$ is bounded by one owing to the property of the $\myReLU(\cdot)$ function.
+  Therefore, we have
+  \begin{equation}
+    \norm{
+      \ppfrac{\mv{c}(\NN_u)}{\wth}
+    }
+    =
+    \norm{
+      \ppfrac{\mv{c}(\NN_u)}{\NN_u}
+      \ppfrac{\NN_u}{\wth}
+    }
+    \le
+    \overline{J}
+    L_{\NN_u}
+    ,
+    \qquad
+    \forall \wth\in\Omega_{\theta}
+    .
+  \end{equation}
+  where $\NN_u:=\NN_u(\NNin;\wth)$, implying the desired result.
+\end{proof}
+
+The following theorem presents the main result of the stability analysis of the closed-loop system under the Hard-CONAC.
+
+\begin{theorem}
+  \label{CONAC:thm:stability}
+  Consider the closed-loop system under the Hard-CONAC with the adaptation law defined in \eqref{CONAC:eq:adap}. 
+  For any initial condition $\mv{z}(0)\in\Omega_{V,0}^s$, where $\Omega_{V,0}^s\subset\Omega_V$ is the compact positively invariant sublevel set defined in \eqref{CONAC:eq:compact:set:sublevel}, the tracking error $\boldsymbol{e}$, the weight estimation error $\widetilde{\boldsymbol{\theta}}$, and the Lagrange multipliers $\lambda_i$, $\forall i\in\mathcal{I}$, are uniformly ultimately bounded. 
 \end{theorem}
 
 \begin{proof}
 
-Consider the following Lyapunov function candidate:
+To facilitate the stability analysis, we define the following Lyapunov function candidate:
 \begin{equation}
   \label{CONAC:eq:V}
   V
   =
   V_c
   +
-  \tfrac{1}{2\alpha}\tilde{\wth}^\top\tilde{\wth}
+  \frac{1}{2\alpha}\tilde{\wth}^\top\tilde{\wth}
   +
-  \textstyle\sum_{i=0}^L
-  \tfrac{1}{\beta_i}
+  \sum_{i=0}^L
+  \frac{1}{\beta_i}
   \left(
     \lambda_i - \lambda_i^o
   \right)^2
-  .
+  ,
 \end{equation}
+where $\lambda_i^o\in\R_{>0},\ \forall i\in\{0,1,\ldots,L\},$ are positive constants and will be defined later.
 Taking the time derivative of $V$ yields
-\begin{align} \label{CONAC:eq:V:dot:1}
+\begin{align} \nonumber
   \ddtt V
   = &
   -\underline{p}\norm{\mv{e}}^2
   +
   \mv{e}^\top
   \left(
-    \pptfrac{\estNN}{\estwth}\tilde{\wth}
+    \ppfrac{\estNN_c}{\estwth}\tilde{\wth}
     +
     \mv{\Delta}
+    +
+    \Delta\mv{u}
   \right)
   -
   \tilde{\wth}^\top
   \left(
-    \pptfrac{\estNN}{\estwth}^\top
+    \ppfrac{\estNN_c}{\estwth}^\top
     \mv{e}
     +
-    \left(
-      \mm{D}^{(0)}
-      \mm{J}^{(0)}
-      \pptfrac{\estNN_u}{\estwth}
-    \right)^\top
-    \mv{r}
-    +
-    \mydiag(\mv{\lambda})\estwth
+    \ppfrac{\estNN_u}{\estwth}^\top
+    {\mm{J}^{(0)}}^\top
+    \mv{r}^{(0)}
   \right)
+  -
+  \sum_{i=0}^L
+  \lambda_i
+  \tilde{\wth}_i^\top
+  \estwth_i
+  \\ \label{CONAC:eq:V:dot:1}
+  &
   +
   \sum_{i=0}^L
+  \frac{1}{2}
   \left(
     \lambda_i - \lambda_i^o
   \right)
@@ -684,29 +1856,31 @@ Taking the time derivative of $V$ yields
     -
     \overline{\theta}_i^2
   \right)
-  \\
+  \\ \nonumber
   =
   &
   -\underline{p}\norm{\mv{e}}^2
   +
   \mv{e}^\top
-  \mv{\Delta}
+  \left(
+    \mv{\Delta}
+    +
+    \Delta\mv{u}
+  \right)
   -
   \tilde{\wth}^\top
-  \left(
-    \mm{D}^{(0)}
-    \mm{J}^{(0)}
-    \pptfrac{\estNN_u}{\estwth}
-  \right)^\top
-  \mv{r}
+  \ppfrac{\estNN_u}{\estwth}^\top
+  {\mm{J}^{(0)}}^\top
+  \mv{r}^{(0)}
   +
   \sum_{i=0}^L
   \left(
     -
     \lambda_i
-    \tilde{\wth}^\top
-    \estwth
+    \tilde{\wth}_i^\top
+    \estwth_i
     +
+    \frac{1}{2}
     \left(
       \lambda_i - \lambda_i^o 
     \right)
@@ -717,8 +1891,434 @@ Taking the time derivative of $V$ yields
       \overline{\theta}_i^2
     \right)
   \right)
+  .
 \end{align}
 
+The last term in \eqref{CONAC:eq:V:dot:1} can be rewritten as follows:
+\begin{align} \label{CONAC:eq:V:dot:1:1}
+  \sum_{i=0}^L
+  \bigg(
+    -
+    \lambda_i
+    \tilde{\wth}_i^\top
+    \estwth_i
+    +
+    &
+    \frac{1}{2}
+    \left(
+      \lambda_i - \lambda_i^o 
+    \right)
+    \left(
+      \estwth_i^\top
+      \estwth_i
+      -
+      \overline{\theta}_i^2
+    \right)
+  \bigg)
+  \\ \nonumber
+  =
+  &
+  \sum_{i=0}^L
+  \bigg(
+    -
+    \lambda_i
+    \tilde{\wth}_i^\top
+    \tilde{\wth}_i
+    -
+    \lambda_i
+    \tilde{\wth}_i^\top
+    \idealwth_i
+    +
+    \frac{1}{2}
+    \left(
+      \lambda_i - \lambda_i^o
+    \right)
+    \left(
+      \tilde{\wth}_i^\top
+      \tilde{\wth}_i
+      +
+      2\tilde{\wth}_i^\top
+      \idealwth_i
+      +
+      {\idealwth_i}^\top
+      \idealwth_i
+      -
+      \overline{\theta}_i^2
+    \right)
+  \bigg)
+  \\ \nonumber
+  =
+  &
+  \sum_{i=0}^L
+  \bigg(
+    -
+    \frac{1}{2}
+    \left(
+      \lambda_i
+      +
+      \lambda_i^o
+    \right)
+    \tilde{\wth}_i^\top
+    \tilde{\wth}_i
+    -
+    \lambda_i^o
+    \tilde{\wth}_i^\top
+    \idealwth_i
+    +
+    \frac{1}{2}
+    \left(
+      \lambda_i - \lambda_i^o
+    \right)
+    \left(
+      {\idealwth_i}^\top
+      \idealwth_i
+      -
+      \overline{\theta}_i^2
+    \right)
+  \bigg)
+  \\ \nonumber
+  \le &
+  \sum_{i=0}^L
+  \bigg(
+    -
+    \frac{1}{2}
+    \lambda_i^o
+    \tilde{\wth}_i^\top
+    \tilde{\wth}_i
+    +
+    a \lambda_i^o
+    \tilde{\wth}_i^\top
+    \tilde{\wth}_i
+    +
+    \frac{\lambda_i^o}{4a}
+    {\idealwth_i}^\top
+    \idealwth_i
+    +
+    \frac{1}{2}
+    \left(
+      \lambda_i - \lambda_i^o
+    \right)
+    \left(
+      {\idealwth_i}^\top
+      \idealwth_i
+      -
+      \overline{\theta}_i^2
+    \right)
+  \bigg)
+  \\ \nonumber
+  \le &
+  \sum_{i=0}^L
+  \bigg(
+    -
+    \left(
+      \frac{1}{2}
+      -
+      a
+    \right)
+    \lambda_i^o
+    \tilde{\wth}_i^\top
+    \tilde{\wth}_i
+    -
+    \frac{1}{2}
+    \underline{\gamma}_i
+    \lambda_i
+  \bigg)
+  +
+  \overline{\Gamma}
+  ,
+\end{align}
+where $a\in(0,\tfrac{1}{2})$ is a positive constant from Young's inequality, and 
+\begin{equation}
+  0<
+  \underline{\gamma}_i
+  \le
+  \overline{\theta}_i^2
+  -
+  {\idealwth_i}^\top\idealwth_i
+  \le
+  \overline{\gamma_i}
+  \le
+  \overline{\theta}_i^2
+  ,
+\end{equation}
+and
+\begin{equation}
+  \overline{\Gamma}
+  :=
+  \sum_{i=0}^L
+  \left(
+    \frac{1}{2}
+    \left(
+      \frac{1}{2a}+1
+    \right)
+    \lambda_i^o
+    \overline{\theta}_i^2
+  \right)
+  \ge
+  \sum_{i=0}^L
+  \left(
+    \frac{\lambda_i^o}{4a}
+    {\idealwth_i}^{\top}\idealwth_i
+    +
+    \frac{\lambda_i^o}{2}
+    \overline{\gamma}_i^2
+  \right)
+  .
+\end{equation}
+
+By substituting \eqref{CONAC:eq:V:dot:1:1} into \eqref{CONAC:eq:V:dot:1}, we have
+\begin{align} 
+  \label{CONAC:eq:V:dot:2}
+  \ddtt V
+  \le &
+  -\underline{p}\norm{\mv{e}}^2
+  +
+  \mv{e}^\top
+  \left(
+    \mv{\Delta}
+    +
+    \Delta\mv{u}
+  \right)
+  -
+  \tilde{\wth}^\top
+  \ppfrac{\estNN_u}{\estwth}^\top
+  {\mm{J}^{(0)}}^\top
+  \mv{r}^{(0)}
+  +
+  \sum_{i=0}^L
+  \bigg(
+    -
+    \left(
+      \frac{1}{2}
+      -
+      a
+    \right)
+    \lambda_i^o
+    \tilde{\wth}_i^\top
+    \tilde{\wth}_i
+    -
+    \frac{1}{2}
+    \underline{\gamma}_i
+    \lambda_i
+  \bigg)
+  +
+  \overline{\Gamma}
+  .
+\end{align}
+
+According to Lemma~\ref{CONAC:lem:proj:sat:err:bound}, we have $\norm{\Delta\mv{u}}\le\sqrt{\frac{2\overline{V}_p}{\mu}}$.
+Moreover, we assume that the DNN input vector $\NNin$ including $\mv{x},\mv{x}_d$ and $\ddtt\mv{x}_d$, remains in a approximation compact set $\Omega_{\NNin}$, which implies that $\mv{\Delta}$ is bounded by $\overline{\Delta}$, according to Assumption~\ref{PRE:lem:NN:UAP}.
+It will be shown that $\NNin$ remains in $\Omega_{\NNin}$ later in the proof.
+Moreover, from Lemma~\ref{CONAC:lem:residual:Lipschitz}, we have 
+\begin{equation}
+  -\tilde{\wth}^\top
+  \ppfrac{\estNN_u}{\estwth}^\top
+  {\mm{J}^{(0)}}^\top
+  \mv{r}^{(0)}
+  \le
+  \norm{\tilde{\wth}}
+  \norm{
+    \ppfrac{\mv{c}(\NN_u)}{\NN_u}
+    \ppfrac{\estNN_u}{\estwth}
+  }
+  \norm{\mv{r}^{(0)}}
+  \le
+  \overline{J}^2L_{\NN_u}^2
+  \norm{\tilde{\wth}}
+  \norm{\estwth-\idealwth}
+  =
+  \overline{J}^2L_{\NN_u}^2
+  \norm{\tilde{\wth}}^2
+  .
+\end{equation}
+Additionally, the following inequality holds:
+\begin{equation}
+  \sum_{i=0}^L
+  \bigg(
+    -
+    \left(
+      \frac{1}{2}
+      -
+      a
+    \right)
+    \lambda_i^o
+    \tilde{\wth}_i^\top
+    \tilde{\wth}_i
+    -
+    \frac{1}{2}
+    \underline{\gamma}_i
+    \lambda_i
+  \bigg)
+  \le
+  -\underline{\lambda}^o
+  \left(
+    \frac{1}{2}
+    -
+    a
+  \right)
+  \norm{\tilde{\wth}}^2
+  -
+  \frac{1}{2}\underline{\gamma}
+  \mv{\lambda}
+  ,
+\end{equation}
+where 
+$\underline{\lambda}^o:=\min_{i\in\{0,1,\ldots,L\}}(\lambda_i^o), \underline{\gamma}:=\min_{i\in\{0,1,\ldots,L\}}(\underline{\gamma}_i)$, and $\mv{\lambda}:=\left(\lambda_0,\lambda_1,\ldots,\lambda_L\right)^\top$.
+
+Therefore, \eqref{CONAC:eq:V:dot:2} can be rewritten as follows:
+\begin{align}
+  \label{CONAC:eq:V:dot:3}
+  \ddtt V
+  \le &
+  -\underline{p}\norm{\mv{e}}^2
+  +
+  \norm{\mv{e}}
+  \left(
+    \overline{\Delta}
+    +
+    \sqrt{\frac{2\overline{V}_p}{\mu}}
+  \right)
+  -
+  \left(
+    \underline{\lambda}^o
+    \left(
+      \frac{1}{2}
+      -
+      a
+    \right)
+    -
+    \overline{J}^2L_{\NN_u}^2
+  \right)
+  \norm{\tilde{\wth}}^2
+  -
+  \frac{1}{2}\underline{\gamma}
+  \mv{\lambda}
+  +
+  \overline{\Gamma}
+  \\ \nonumber
+  \le &
+  -
+  \left(
+    \underline{p}
+    -
+    \frac{1}{2}
+  \right)
+  \norm{\mv{e}}^2
+  -
+  \left(
+    \underline{\lambda}^o
+    \left(
+      \frac{1}{2}
+      -
+      a
+    \right)
+    -
+    \overline{J}^2L_{\NN_u}^2
+  \right)
+  \norm{\tilde{\wth}}^2
+  -
+  \frac{1}{2}\underline{\gamma}
+  \mv{\lambda}
+  +
+  \frac{1}{2}
+  \left(
+    \overline{\Delta}
+    +
+    \sqrt{\frac{2\overline{V}_p}{\mu}}
+  \right)^2
+  +
+  \overline{\Gamma}
+  .
+\end{align}
+
+Then, by assuming $\underline{p}>\frac{1}{2}$ and selecting $\underline{\lambda}^o>\frac{2\overline{J}^2L_{\NN_u}^2}{1-2a}$, $\ddtt V$ is negative outside a compact set, which is defined as follows:
+\begin{equation}
+  \label{CONAC:eq:compact:set}
+  \Omega_V
+  :=
+  \left\{
+  \mv{z}\in\R^{n+\Xi+L+1}
+  :
+  a
+  \norm{
+    (
+      \mv{e}^\top
+      ,
+      {\estwth}^\top
+    )^\top
+  }^2
+  +
+  b
+  \norm{\mv{\lambda}}_1
+  \le
+  c
+  \right\}
+  ,
+\end{equation}
+where $\mv{z}:=\left(\mv{e}^\top,\tilde{\wth}^\top,\mv{\lambda}^\top\right)^\top$ denotes the concatenated state vector, and $a,b,c\in\R_{>0}$ are positive constants, which are defined as follows:
+\begin{equation}
+  a
+  :=
+  \min\left\{
+    \underline{p}-\frac{1}{2},
+    \underline{\lambda}^o\left(\frac{1}{2}-a\right)-\overline{J}^2L_{\NN_u}^2
+  \right\}
+  ,
+  \quad
+  b
+  :=
+  \frac{1}{2}\underline{\gamma}
+  ,
+  \quad
+  c
+  :=
+  \frac{1}{2}
+  \left(
+    \overline{\Delta}
+    +
+    \sqrt{\frac{2\overline{V}_p}{\mu}}
+  \right)^2
+  +
+  \overline{\Gamma}
+  .
+\end{equation}
+
+Let
+\begin{equation}
+  \Omega_V^s
+  :=
+  \left\{
+    \mv{z}\in\Omega_V
+    :
+    V(\mv{z})\leq c_s
+  \right\}
+\end{equation}
+be a compact sublevel set such that $\ddtt V<0$ on $\Omega_V\setminus\Omega_V^s$.
+Choose $c_0>c_s$ such that the compact sublevel set
+\begin{equation}
+  \label{CONAC:eq:compact:set:sublevel}
+  \Omega_{V,0}^s
+  :=
+  \left\{
+    \mv{z}\in\Omega_V
+    :
+    V(\mv{z})\leq c_0
+  \right\}
+\end{equation}
+is positively invariant. 
+Then, for any $\mv{z}(0)\in\Omega_{V,0}^s$, the closed-loop system is uniformly ultimately bounded in $\Omega_V^s$. 
+Hence, $\mv{e}$, $\widetilde{\mv{\theta}}$, and $\mv{\lambda}$ are bounded.
+
+Moreover, since $\mv{x}=\mv{e}+\mv{x}_d$ and $\mv{x}_d$ and $\dot{\mv{x}}_d$ are bounded byAssumption~\ref{CONAC:assum:xd}, the DNN input $\NNin$ remains in a compact set $\Omega_{nn}$. 
+Therefore, Lemma~\ref{PRE:lem:NN:UAP} ensures that
+$
+  \|\boldsymbol{\Delta}(\NNin)\|
+  \leq
+  \overline{\Delta},
+  \ 
+  \forall\NNin\in\Omega_{nn}
+  .
+$
 
 \end{proof}
 
@@ -728,12 +2328,304 @@ Taking the time derivative of $V$ yields
 \section{Validation}
 \label{CONAC:sec:validation}
 
+% —————————————————————————————————————————————————————
+% VALIDATION: Set up
+% —————————————————————————————————————————————————————
+\subsection{Validation Setup}
+
+% -------------------------------------
+% Experiment Setup
+% -------------------------------------
+To validate the Hard-CONAC, a validation was conducted on a two-link robotic manipulator.
+The system parameters and the schematic diagram are shown in Table~\ref{CONAC:table:exp:system:params} and Fig.~\ref{CONAC:fig:exp:robot:diagram}, respectively.
+
+% -------------------------------------
+% Robot System
+% -------------------------------------
+The two-link robotic manipulator dynamics are described by the following Euler-Lagrange equation:
+\begin{equation} 
+  \label{CONAC:eq:robot:dynamics}
+  \mv{M}(\mv{q})\tfrac{\der^2}{\der t^2}{\mv{q}}
+  +
+  \mv{C}(\mv{q},\ddtt\mv{q})\ddtt\mv{q}
+  +
+  \mv{G}(\mv{q})
+  =
+  \mysat
+  (
+    \mv{\tau}
+  )
+  ,
+\end{equation}
+where $\mv{q} := \left(q_1,q_2\right)^\top \in \R^2$ is the joint angle vector, $\mv{\tau} := \left(\tau_1,\tau_2\right)^\top \in \R^2$ is the joint torque vector, $\mv{M}(\mv{q}) \in \R^{2\times2}$ is the inertia matrix, $\mv{C}(\mv{q},\ddtt\mv{q}) \in \R^{2\times2}$ is the Coriolis matrix, and $\mv{G}(\mv{q}) \in \R^2$ is the gravity vector.
+The inertia matrix $\mv{M}(\mv{q})$ whose inverse is the control effectiveness matrix, is a symmetric positive-definite matrix according to the physical properties of Euler-Lagrange equation, \cite[Lemma 3.1]{Ji:2025aa}.
+
+To apply CONAC, the system was reformulated into the first-order dynamics form in \eqref{CONAC:eq:sys} by defining the state as $\mv{x} := \ddtt\mv{q}+\Lambda\mv{q}$, and the control input as $\mv{u} := \mv{\tau}$, where $\Lambda\in\R^{2\times2}$ is a positive definite matrix, and $\mv{f}:=\mv{M}^{-1}(\mv{q})\left(-\mv{C}(\mv{q},\ddtt\mv{q})\ddtt\mv{q}-\mv{G}(\mv{q})\right)+\Lambda\ddtt\mv{q}$, and $\mm{B}:=\mv{M}^{-1}(\mv{q})$.
+Moreover, the DNN input vector was defined as 
+$
+  \NNin 
+  := 
+  \left(
+    (\mv{q}-\mv{q}_d)^\top
+    ,
+    \ddtt(\mv{q}-\mv{q}_d)^\top
+    ,
+    \tfrac{\der^2}{\der t^2}\mv{q}_d^\top
+    ,
+    1
+  \right)^\top
+  ,
+$
+since $\mv{f}$, $\mm{B}$ and $\ddtt\mv{x}_d$ in \eqref{CONAC:eq:ctrl:actual} are functions of $\mv{q},\mv{q}_d,\ddtt\mv{q},\ddtt\mv{q}_d$ and $\tfrac{\der^2}{\der t^2}\mv{q}_d$.
+
+The input saturation $\mysat(\mv{\tau})$ was defined as follows:
+%  as a combination of the torque saturation of the second joint and the norm saturation of the control input, 
+\begin{equation} 
+  \label{CONAC:eq:exp:sat}
+  \mysat(\mv{\tau})
+  =
+  \begin{cases}
+    % if |tau_2| > \overline{\tau}_2 and |tau_1| > \overline{\tau}_1
+    \begin{pmatrix}
+      \mysign(\tau_1)\overline{\tau}_1
+      \\
+      \mysign(\tau_2)\overline{\tau}_2
+    \end{pmatrix}
+    , &
+    \text{if }
+    \vert\tau_2\vert > \overline{\tau}_2
+    \text{ and }
+    \vert\tau_1\vert > \overline{\tau}_1
+    \\
+    % if |tau_2| > \overline{\tau}_2 and |tau_1| <= \overline{\tau}_1
+    \left(
+      \tau_1
+      , 
+      \mysign(\tau_2)\overline{\tau}_2
+    \right)^\top
+    , &
+    \text{if }
+    \vert\tau_2\vert > \overline{\tau}_2
+    \text{ and }
+    \vert\tau_1\vert \le \overline{\tau}_1
+    \\
+    % if |tau_2| <= \overline{\tau}_2 and ||tau|| > \overline{\tau}
+    \tfrac{\overline{\tau}}{\norm{\mv{\tau}}}\mv{\tau}
+    , &
+    \text{if }
+    |\tau_2| \le \overline{\tau}_2
+    \text{ and }
+    \norm{\mv{\tau}} > \overline{\tau}
+    \\
+    % otherwise
+    \mv{\tau}
+    , &
+    \text{otherwise}
+    ,
+  \end{cases}
+  % \mysat(\mv{\tau})
+  % =
+  % \min\left\{
+  %   1,\,
+  %   \frac{\overline{\tau}}{\norm{\mv{v}}}
+  % \right\}
+  % \mv{v}
+  % ,
+  % % \text{where } 
+  % \ 
+  % \mv{v}
+  % :=
+  % \begin{pmatrix}
+  %   \tau_1
+  %   \\
+  %   \operatorname{clip}(\tau_2,-\overline{\tau}_2,\overline{\tau}_2)
+  % \end{pmatrix}
+  % ,
+\end{equation}
+where $\overline{\tau}_2=\qty{3.8}{\newton\meter}$, $\overline{\tau}_1=\qty{10.32}{\newton\meter}$ and $\overline{\tau}=\qty{11}{\newton\meter}$, as illustrated in Fig.~\ref{CONAC:fig:exp:robot:sat}.
+\cred{
+The saturation function can be decomposed into three convex input constraints, which can be physically interpreted as the upper and lower torque limit of the second joint and the power source limit, respectively, and are denoted by
+\begin{equation} \label{CONAC:eq:val:cstr:input}
+  c^u_{\overline{\tau}_2}(\mv{\tau}) 
+  := 
+  \tau_2 - \overline{\tau}_2
+  ,
+  \ 
+  c^u_{\underline{\tau}_2}(\mv{\tau}) 
+  := 
+  -\tau_2 - \overline{\tau}_2
+  ,
+  \ 
+  c^u_{\overline{\tau}}(\mv{\tau})
+  := 
+  \norm{\mv{\tau}}^2 - \overline{\tau}^2
+  .
+\end{equation}
+Accordingly, the input constraint index set is defined as $\mathcal{I} = \{\overline{\tau}_2, \underline{\tau}_2, \overline{\tau}\}$.
+}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+The satisfaction of the non-degeneracy condition in Assumption~\ref{CONAC:assum:non:degeneracy} is verified as follows.
+First, the gradient of the upper and lower torque limit constraints $c^u_{\overline{\tau}_2}$ and $c^u_{\underline{\tau}_2}$ are derived as follows:
+\begin{equation}
+  \ppfrac{c^u_{\overline{\tau}_2}}{\estwth} 
+  =
+  -
+  \ppfrac{c^u_{\underline{\tau}_2}}{\estwth} 
+  =
+  \ppfrac{(\mm{P}\estNN)}{\estwth}^\top
+  \begin{pmatrix}
+    0\\1
+  \end{pmatrix}
+  =
+  \ppfrac{\estNN}{\estwth}^\top
+  \mm{P}^\top
+  \begin{pmatrix}
+    0\\1
+  \end{pmatrix}
+  .
+\end{equation}
+Next, the gradient of the power source limit constraint $c^u_{\overline{\tau}}$ is derived as follows:
+\begin{equation}
+  \ppfrac{c^u_{\overline{\tau}}}{\estwth}
+  =
+  \ppfrac{\mv{\tau}}{\estwth}^\top
+  \mv{\tau}
+  =
+  \ppfrac{(\mm{P}\estNN)}{\estwth}^\top
+  \mm{P}\estNN
+  =
+  \ppfrac{\estNN}{\estwth}^\top
+  \mm{P}^\top
+  \mm{P}
+  \estNN
+  .
+\end{equation}
+Since the upper and lower torque limit constraints are not active simultaneously, the gradients of the active constraints are linearly independent, satisfying the LICQ condition.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{figure}[t]
+  \centering
+  \subfloat[Schematic diagram of the two-link robotic manipulator.]{
+    \includegraphics[width=0.35\linewidth]{figs/general_figs/RobotModel.drawio.pdf}
+    \label{CONAC:fig:exp:robot:diagram}
+  }
+  % \vfill
+  \subfloat[Considered input Saturation.]{
+    \includegraphics[width=0.35\linewidth]{figs/general_figs/saturation.drawio.pdf}
+    \label{CONAC:fig:exp:robot:sat}
+  }
+  \caption{
+    The two-link robotic manipulator and the considered input saturation.
+  }
+  \label{CONAC:fig:exp:robot}
+\end{figure}
+
+\begin{table}[t]
+  \renewcommand{\arraystretch}{1.3}
+  \caption{Two-link robotic manipulator's parameters.}
+  \centering
+  \begin{tabular}{c m{11.5em} c}
+  \hline
+  \textbf{Symbol} & \textbf{Description} & \textbf{Value} \\
+  \hline
+  \hline 
+    $m_1,m_2$ & Mass of the links & \qty{2.465}{\kilo\gram} \\
+  \hline
+    $l_1,l_2$  & Length of the links & \qty{0.2}{\meter} \\  
+  \hline
+    ${l_c}_1,{l_c}_2$ & Length to the center of mass & \qty{0.139}{\meter} \\
+  \hline
+    $I_1,I_2$  & Inertia of the links & \qty{0.069}{\kilo\gram\meter\squared} \\
+  \hline
+  \end{tabular}
+  \label{CONAC:table:exp:system:params}
+\end{table}
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.45\linewidth]{figs/general_figs/desired_traj.drawio.pdf}
+  \caption{
+    The desired trajectory in Episode~1 and Episode~2.
+  }
+  \label{CONAC:fig:exp:des:traj}
+\end{figure}
+
+% ------------------------------------
+% desired trajectory
+% ------------------------------------
+The desired trajectory comprised 4 segments that move the system from 
+$
+  \mv{q}_d^{(0)}
+  :=
+  \left(
+    -\qty{60}{\degree}
+    ,
+    \qty{60}{\degree}
+  \right)^\top    
+$
+to 
+$
+  \mv{q}_d^{(1)}
+  :=
+  \left(
+    \qty{45}{\degree}
+    ,
+    -\qty{90}{\degree}
+  \right)
+  ,
+$ 
+then to 
+$
+  \mv{q}_d^{(2)}
+  :=
+  \left(
+    -\qty{45}{\degree}
+    ,
+    \qty{45}{\degree}
+  \right)^\top
+  ,
+$
+back to
+$
+  \mv{q}_d^{(3)}
+  :=
+  \mv{q}_d^{(1)}
+  ,
+$
+and finally to the initial position $\mv{q}_d^{(0)}$, as illustrated in Fig.~\ref{CONAC:fig:exp:des:traj}.
+Each segment was designed using a quintic ($5$th-order) polynomial trajectory to ensure the smoothness of the desired trajectory, with zero initial and final velocities.
+The time duration of the segments was defined as $\qty{2}{\second}$.
+To demonstrate the learning capability of the DNN, the desired trajectory was applied twice, referred to as Episode $1$ and Episode $2$, respectively.
+
+A warm-up phase was introduced prior to applying the desired trajectory to avoid the instability caused by the initial poor performance of the DNN.
+In the warm-up phase, the manipulator was initially positioned at a stable equilibrium point, denoted as 
+$
+    {\qd}^{\rm{origin}} 
+    := 
+    \left(
+        % -\tfrac{1}{2}\pi
+        -\qty{90}{\degree}
+        , 
+        % 0
+        \qty{0}{\degree}
+    \right)^\top
+    ,
+$
+and remained at this position for $\qty{3}{\second}$.
+Subsequently, a conservative desired trajectory was applied to gently excite the system, which was designed as a quintic polynomial trajectory that moves the system from ${\qd}^{\rm{origin}}$ to $\mv{q}_d^{(0)}$ in $\qty{3}{\second}$, followed by a constant reference that holds the system at $\mv q_d^{(0)}$ for the next $\qty{8}{\second}$.
+
+% -------------------------------------
+% Comparative Controllers
+% -------------------------------------
+
+Controllers used for comparative analysis are summarized in Table~\ref{CONAC:table:cmp:ctrl} with their corresponding parameters and input constraints.
 
 
 \begin{table}[t]
   \renewcommand{\arraystretch}{1.3}
   \caption{Controllers and parameters used for comparative analysis.}
-  \label{table:controller}
+  \label{CONAC:table:cmp:ctrl}
   \centering
   % \begin{tabular}{m{.6cm} m{4cm} m{2.7cm}}
   \begin{tabular}{m{.6cm} m{6cm} m{4.7cm}}
@@ -833,6 +2725,11 @@ Taking the time derivative of $V$ yields
   \end{tabular}
 \end{table}
 
+% —————————————————————————————————————————————————————
+% VALIDATION: RESULTS
+% —————————————————————————————————————————————————————
+\subsection{Validation Results}
+
 \begin{figure*}[t]
   \centering
   \subfloat[Tracking performance of $1$st joint angle $q_1$.]{
@@ -840,14 +2737,14 @@ Taking the time derivative of $V$ yields
     {
       \resultFig/Fig1.eps
     }%
-    \label{fig:ctrl:result:general:q1}}
+    \label{CONAC:fig:ctrl:result:general:q1}}
   \hfill
   \subfloat[Tracking performance of $2$nd joint angle $q_2$.]{
     \includegraphics[width=.49\linewidth]
     {
       \resultFig/Fig2.eps
     }%
-    \label{fig:ctrl:result:general:q2}}
+    \label{CONAC:fig:ctrl:result:general:q2}}
   \vfill
   % \vfill
   \subfloat[Commanded control input of the $1$st joint $\tau_1$.]{
@@ -855,21 +2752,21 @@ Taking the time derivative of $V$ yields
     {
       \resultFig/Fig5.eps
     }%
-    \label{fig:ctrl:result:general:tau:1}}
+    \label{CONAC:fig:ctrl:result:general:tau:1}}
   \hfill
     \subfloat[Commanded control input of the 2nd joint $\tau_2$.]{
     \includegraphics[width=.49\linewidth]
     {
       \resultFig/Fig6.eps
     }%
-    \label{fig:ctrl:result:general:tau:2}}
+    \label{CONAC:fig:ctrl:result:general:tau:2}}
   \vfill
   \subfloat[Norm of the commanded control input $\mv{\tau}$.]{
     \includegraphics[width=.49\linewidth]
     {
       \resultFig/Fig7.eps
     }%
-    \label{fig:ctrl:result:general:tau:norm}}
+    \label{CONAC:fig:ctrl:result:general:tau:norm}}
   \hfill
   % \vfill
   \subfloat[Norm of DNN weights ${\estwth}_i$.]{
@@ -878,17 +2775,13 @@ Taking the time derivative of $V$ yields
     {
       \resultFig/Fig10.eps
     }%
-    \label{fig:ctrl:result:general:weight}}        
+    \label{CONAC:fig:ctrl:result:general:weight}}        
   \caption{
       Real-time implementation results of (C$_1$) \protect\colorLine{blue}{solid}, (C$_2$) \protect\colorLine{my_cyan}{solid}, (C$_3$) \protect\colorLine{gray}{solid}, and desired trajectory $\qd$ \protect\colorLine{red}{dashed}.
       % \vspace{-5mm}
   }
-\label{fig:ctrl:result:general}
+\label{CONAC:fig:ctrl:result:general}
 \end{figure*}
-
-
-
-
 
 
 \begin{figure*}[t]
@@ -898,7 +2791,7 @@ Taking the time derivative of $V$ yields
     {
       \resultFig/Fig11.eps
     }
-    \label{fig:ctrl:result:detail:q:top:view}
+    \label{CONAC:fig:ctrl:result:DPL:steps}
   }
   \hfill
   \subfloat[Convergence of the DPL.]{
@@ -906,12 +2799,12 @@ Taking the time derivative of $V$ yields
     {
       \resultFig/Fig13.eps
     }
-    \label{fig:ctrl:result:detail:u:top:view}
+    \label{CONAC:fig:ctrl:result:DPL:convergence}
   }
   \caption{  
     Detail results of the control implementation of (C$_1$).
   }
-  \label{fig:ctrl:result:detail}
+  \label{CONAC:fig:ctrl:result:DPL}
 \end{figure*}
 
 
@@ -922,7 +2815,7 @@ Taking the time derivative of $V$ yields
     {
       \resultFig/Fig14.eps
     }
-    \label{fig:ctrl:result:detail:q:top:view}
+    \label{CONAC:fig:ctrl:result:detail:q:top:view}
   }
   \hfill
   \subfloat[Trajectory of the commanded control input $\mv{\tau}$ during the time interval {$[\zoomStartTime, \qty{\zoomEndTime}{\second}]$}.]{
@@ -930,7 +2823,7 @@ Taking the time derivative of $V$ yields
     {
       \resultFig/Fig8.eps
     }
-    \label{fig:ctrl:result:detail:u:top:view}
+    \label{CONAC:fig:ctrl:result:detail:u:top:view}
   }
   \vfill
   \subfloat[Number of the linearized projection steps in the DPL of (C$_1$) during the time interval {$[\zoomStartTime, \qty{\zoomEndTime}{\second}]$}.]{
@@ -938,7 +2831,7 @@ Taking the time derivative of $V$ yields
     {
       \resultFig/Fig12.eps
     }
-    \label{fig:ctrl:result:detail:multipliers}
+    \label{CONAC:fig:ctrl:result:detail:DPL:steps}
   }
   \hfill
   \subfloat[Lagrange multiplier associated with the power source limit constraint for (C$_1$) during the time interval {$[\zoomStartTime, \qty{\zoomEndTime}{\second}]$}.]{
@@ -946,14 +2839,14 @@ Taking the time derivative of $V$ yields
     {
       \resultFig/Fig9.eps
     }
-    \label{fig:ctrl:result:detail:multipliers}
+    \label{CONAC:fig:ctrl:result:detail:multipliers}
   }
   \caption{  
     Zoomed-in view of the tracking error, commanded control input, and
 Lagrange multiplier $\lambda_{\overline{\tau}}$ during the time interval
 $[\zoomStartTime, \qty{\zoomEndTime}{\second}]$ of (C$_1$) \protect\colorLine{blue}{solid}, (C$_2$) \protect\colorLine{my_cyan}{solid}, and (C$_3$) \protect\colorLine{gray}{solid}.
   }
-  \label{fig:ctrl:result:detail}
+  \label{CONAC:fig:ctrl:result:detail}
 \end{figure*}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
