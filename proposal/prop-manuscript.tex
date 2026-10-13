@@ -7,6 +7,7 @@
 %   - c3ff103fd5c084aac6d0cd96b04f8e79a7cdcc94
 % Ver. 0.2.1 Hard-CONAC draft updated (Until validation!)
 %   - 
+% Ver. 0.2.2 Minor change (shared with Prof)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \documentclass[10pt]{report}
@@ -47,7 +48,7 @@
   Compiled on \today
   \\
   \textit{
-    Version 0.2.1
+    Version 0.2.2
   }
 }
 
@@ -84,9 +85,11 @@
 
 \begin{IEEEbiography}[{
     \includegraphics[width=1in,height=1.25in,clip,keepaspectratio]{\template/people/nsErega.jpg}}]{Naol Samuel Erega {\tt{\small samuelnaol7@kaist.ac.kr}}}
+    \cred{
     received the B.S. degree in Mechanical Engineering from Incheon National University, South Korea, in 2023, and the M.S. degree in Mechanical Engineering from GIST, South Korea, in 2025.
     He is currently pursuing the Ph.D. degree in the Cho Chun Shik Graduate School of Mobility at Korea Advanced Institute of Science and Technology (KAIST), South Korea.
     His research interests include neuro-adaptive control, online optimization, and contraction theory.
+    }
 \end{IEEEbiography}
 
 \begin{IEEEbiography}[{
@@ -97,11 +100,11 @@
 \newpage
 
 \begin{abstract}
-  This proposal presents a neural-network framework for enforcing hard constraints in the presence of uncertain constraint functions.
-  HardNet++ provides a systematic approach for constructing neural networks whose outputs satisfy prescribed hard constraints. 
+  This proposal presents a neural-network (NN) framework for enforcing hard constraints in the presence of uncertain constraint functions.
+  HardNet++ provides a systematic approach for constructing NNs whose outputs satisfy prescribed hard constraints. 
   However, its direct application requires the functions defining the constraints to be known.
-  To address constraints containing unknown functions, additional neural networks are introduced to estimate the unknown components and incorporate them into the constraint-enforcement architecture. The proposed approach will be investigated in both deep-learning and neuro-adaptive-control frameworks. 
-  In the latter, the constrained neural-network architecture is integrated with online adaptation to account for system uncertainty while maintaining admissible control inputs. 
+  To address constraints containing unknown (uncertain) functions, additional NNs are introduced to estimate the unknown components and incorporate them into the constraint-enforcement architecture. 
+  The proposed approach will be investigated in both neuro-adaptive-control and deep-learning frameworks.
   Theoretical and numerical studies will be conducted to examine constraint satisfaction, approximation performance, and closed-loop behavior of the resulting framework.
 \end{abstract}
 
@@ -114,6 +117,7 @@
 \input{chapters/preliminaries.tex}
 \input{chapters/Hard-CONAC.tex}
 \input{chapters/PhysicalHardNet.tex}
+\chapter{Adaptive Hard Constraint Enforcement in Neural Networks}
 \input{chapters/conclusion.tex}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

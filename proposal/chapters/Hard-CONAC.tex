@@ -5,7 +5,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % CHAPTER: HardNet++ on Neuro-Adaptive Control
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\chapter{Hard-CONAC: Integration of HardNet++ and CONAC}
+\chapter{Hard-CONAC: Integrating HardNet++ and CONAC for Hard Input Constraint Enforcement}
 \label{CONAC:chap:hard:CONAC}
 
 This chapter introduces the Hard-Constrained Optimization-Based Neuro-Adaptive Control (Hard-CONAC) architecture, which integrates the HardNet++ framework with the CONAC approach.
@@ -94,6 +94,7 @@ The system is subject to the following assumptions:
       \quad \forall \mv{u}\notin\Omega_u
       .
     \end{equation}
+    \cred{In order to consider non-convex constraints, the projection operator $\mysat(\mv{u})$ is defined as a set of minimizers of the distance between the unconstrained input $\mv{u}$ and the admissible input set $\Omega_u$.}
 
   \end{enumerate}
 \end{assum}
@@ -332,6 +333,8 @@ where $\mm{H}_c^{(k)} = \mm{J}_c^{(k)}{\mm{J}_c^{(k)}}^{\top}$ is the Gram matri
 We assume that the number of linearized projection iterations is finite and denoted by $K$.
 Moreover, in a practical perspective, we introduce a tolerance $r_{\mathrm{tol}}\in\R_{>0}$ for the constraint residual $\mv{r}^{(k)}$ for the early termination of the DPL.
 This results in the relaxed admissible input set $\tilde{\Omega}_c\supset\Omega_c$ defined in \eqref{CONAC:eq:proj:relaxed:admissible} and finite-iteration convergence of the DPL, which will be discussed in Corollary~\ref{CONAC:cor:proj:finite:step} and Lemma~\ref{CONAC:lem:proj:sat:err:bound}.
+It should be noted that, even if the DPL terminates before completing $K$ iterations, each remaining iteration is treated as an identity mapping that passes its input unchanged to its output. 
+Therefore, the DPL can equivalently be regarded as a fixed $K$-iteration mapping.
 
 For better intuition, the algorithm of the projection operator $\mv{\Pi}(\NN_u)$ is summarized in Algorithm~\ref{CONAC:alg:proj}.
 
@@ -2443,7 +2446,7 @@ The input saturation $\mysat(\mv{\tau})$ was defined as follows:
   % ,
 \end{equation}
 where $\overline{\tau}_2=\qty{3.8}{\newton\meter}$, $\overline{\tau}_1=\qty{10.32}{\newton\meter}$ and $\overline{\tau}=\qty{11}{\newton\meter}$, as illustrated in Fig.~\ref{CONAC:fig:exp:robot:sat}.
-\cred{
+
 The saturation function can be decomposed into three convex input constraints, which can be physically interpreted as the upper and lower torque limit of the second joint and the power source limit, respectively, and are denoted by
 \begin{equation} \label{CONAC:eq:val:cstr:input}
   c^u_{\overline{\tau}_2}(\mv{\tau}) 
@@ -2461,47 +2464,49 @@ The saturation function can be decomposed into three convex input constraints, w
   \norm{\mv{\tau}}^2 - \overline{\tau}^2
   .
 \end{equation}
-Accordingly, the input constraint index set is defined as $\mathcal{I} = \{\overline{\tau}_2, \underline{\tau}_2, \overline{\tau}\}$.
-}
+Accordingly, the constraint vector $\mv{c}(\mv{\tau})$ and its upper and lower bounds $\overline{\mv{b}}$ and $\underline{\mv{b}}$ are defined as follows:
+\begin{equation}
+  \underline{b}
+  =
+  \begin{pmatrix}
+    -\overline{\tau}_2
+    \\
+    0
+  \end{pmatrix}
+  ,
+  \quad
+  \mv{c}(\mv{\tau})
+  =
+  \begin{pmatrix}
+    \tau_2
+    \\
+    \mv{\tau}^\top\mv{\tau}
+  \end{pmatrix}
+  ,
+  \quad
+  \overline{b}
+  =
+  \begin{pmatrix}
+    \overline{\tau}_2
+    \\
+    \overline{\tau}^2
+  \end{pmatrix}
+  .
+\end{equation}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 The satisfaction of the non-degeneracy condition in Assumption~\ref{CONAC:assum:non:degeneracy} is verified as follows.
-First, the gradient of the upper and lower torque limit constraints $c^u_{\overline{\tau}_2}$ and $c^u_{\underline{\tau}_2}$ are derived as follows:
+The Jacobian of the constraint function $\mv{c}(\mv{\tau})$ with respect to the control input $\mv{\tau}$ is derived as follows:
 \begin{equation}
-  \ppfrac{c^u_{\overline{\tau}_2}}{\estwth} 
+  \ppfrac{\mv{c}(\mv{\tau})}{\mv{\tau}}
   =
-  -
-  \ppfrac{c^u_{\underline{\tau}_2}}{\estwth} 
-  =
-  \ppfrac{(\mm{P}\estNN)}{\estwth}^\top
   \begin{pmatrix}
-    0\\1
-  \end{pmatrix}
-  =
-  \ppfrac{\estNN}{\estwth}^\top
-  \mm{P}^\top
-  \begin{pmatrix}
-    0\\1
+    0 & 1\\
+    2\tau_1 & 2\tau_2
   \end{pmatrix}
   .
 \end{equation}
-Next, the gradient of the power source limit constraint $c^u_{\overline{\tau}}$ is derived as follows:
-\begin{equation}
-  \ppfrac{c^u_{\overline{\tau}}}{\estwth}
-  =
-  \ppfrac{\mv{\tau}}{\estwth}^\top
-  \mv{\tau}
-  =
-  \ppfrac{(\mm{P}\estNN)}{\estwth}^\top
-  \mm{P}\estNN
-  =
-  \ppfrac{\estNN}{\estwth}^\top
-  \mm{P}^\top
-  \mm{P}
-  \estNN
-  .
-\end{equation}
-Since the upper and lower torque limit constraints are not active simultaneously, the gradients of the active constraints are linearly independent, satisfying the LICQ condition.
+Since $\ppfrac{\mv{c}(\mv{\tau})}{\mv{\tau}}$ is full rank for any $\mv{\tau}\in\R^2$, the non-degeneracy condition is satisfied.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \begin{figure}[t]
@@ -2782,6 +2787,9 @@ Controllers used for comparative analysis are summarized in Table~\ref{CONAC:tab
   }
 \label{CONAC:fig:ctrl:result:general}
 \end{figure*}
+
+The validation results are presented in Fig.~\ref{CONAC:fig:ctrl:result:general}.
+As shown in the figures, 
 
 
 \begin{figure*}[t]

@@ -76,6 +76,10 @@ We review some mathematical preliminaries that will be used throughout this prop
   where $\nabla \mv{f}(\mv{x}):=\ppfrac{\mv{f}(\mv{x})}{\mv{x}}$ denotes the Jacobian matrix of $\mv{f}$ at $\mv{x}$.
 \end{lem}
 
+\begin{proof}
+  \cred{To be added.}
+\end{proof}
+
 \begin{lem}
   \label{PRE:lem:lib:ineq}
   Consider a function $\mv{f}:\mathbb{R}^n\to\mathbb{R}^m$ that is $L$-Lipschitz continuous on a compact set $\mathcal{X}\subset\mathbb{R}^n$. 
@@ -326,6 +330,10 @@ where $\phi_j:\R\to\R$ is the activation function of the $j$-th neuron in the $l
   \end{equation}
 \end{lem}
 
+\begin{proof}
+  \cred{To be added.}
+\end{proof}
+
 % Lipschitz continuity of unconstrained DNNs
 \begin{lem}[Lipschitz continuity of a neural network with respect to its parameters]
   \label{PRE:lem:NN:param:Lipschitz}
@@ -407,390 +415,391 @@ where $\phi_j:\R\to\R$ is the activation function of the $j$-th neuron in the $l
   \end{equation}
   and $\act_i:= \act_i(\NN_{i-1})$ and $\act_i':= \ddtfrac{\act_i}{\NN_{i-1}}$, for all $i\in\mathcal{K}\setminus\{0\}$.
 
+  \cred{To be added.}
+
 \end{proof}
 
-% Lipschitz continuity of the unconstrained DNN
-\begin{lem}[Lipschitz continuity of a neural network with respect to its parameters]
-  \label{PRE:lem:NN:param:Lipschitz}
-  Consider the unconstrained DNN
-  $\NN_u(\NNin;\wth)$ defined in \eqref{PRE:eq:DNN} for a fixed input
-  $\NNin$, where
-  \begin{equation}
-    \wth
-    =
-    \operatorname{col}
-    \left(
-      \wth_0,\wth_1,\ldots,\wth_L
-    \right)
-    \in\R^\Xi.
-  \end{equation}
-  Suppose that each activation function
-  $\phi_l$, $l\in\{1,\ldots,L\}$, is
-  $L_{\phi_l}$-Lipschitz continuous and that
-  $\wth$ belongs to a compact set
-  $\mathcal{W}\subset\R^\Xi$.
-  Then, there exists a constant
-  $L_{\NN_u}\in\R_{>0}$ such that
-  \begin{equation}
-    \label{PRE:eq:NN:param:Lipschitz}
-    \norm{
-      \NN_u(\NNin;\wth_1)
-      -
-      \NN_u(\NNin;\wth_2)
-    }
-    \leq
-    L_{\NN_u}
-    \norm{\wth_1-\wth_2},
-    \qquad
-    \forall\wth_1,\wth_2\in\mathcal{W}.
-  \end{equation}
-  Moreover, $\NN_u$ is differentiable with respect to $\wth$
-  almost everywhere and satisfies
-  \begin{equation}
-    \norm{A}
-    \leq
-    L_{\NN_u},
-    \qquad
-    \forall
-    A\in
-    \partial_C\NN_u(\NNin;\wth),
-    \quad
-    \forall\wth\in\mathcal{W},
-  \end{equation}
-  where $\partial_C$ denotes the Clarke generalized Jacobian.
-\end{lem}
+% % Lipschitz continuity of the unconstrained DNN
+% \begin{lem}[Lipschitz continuity of a neural network with respect to its parameters]
+%   \label{PRE:lem:NN:param:Lipschitz}
+%   Consider the unconstrained DNN
+%   $\NN_u(\NNin;\wth)$ defined in \eqref{PRE:eq:DNN} for a fixed input
+%   $\NNin$, where
+%   \begin{equation}
+%     \wth
+%     =
+%     \operatorname{col}
+%     \left(
+%       \wth_0,\wth_1,\ldots,\wth_L
+%     \right)
+%     \in\R^\Xi.
+%   \end{equation}
+%   Suppose that each activation function
+%   $\phi_l$, $l\in\{1,\ldots,L\}$, is
+%   $L_{\phi_l}$-Lipschitz continuous and that
+%   $\wth$ belongs to a compact set
+%   $\mathcal{W}\subset\R^\Xi$.
+%   Then, there exists a constant
+%   $L_{\NN_u}\in\R_{>0}$ such that
+%   \begin{equation}
+%     \label{PRE:eq:NN:param:Lipschitz}
+%     \norm{
+%       \NN_u(\NNin;\wth_1)
+%       -
+%       \NN_u(\NNin;\wth_2)
+%     }
+%     \leq
+%     L_{\NN_u}
+%     \norm{\wth_1-\wth_2},
+%     \qquad
+%     \forall\wth_1,\wth_2\in\mathcal{W}.
+%   \end{equation}
+%   Moreover, $\NN_u$ is differentiable with respect to $\wth$
+%   almost everywhere and satisfies
+%   \begin{equation}
+%     \norm{A}
+%     \leq
+%     L_{\NN_u},
+%     \qquad
+%     \forall
+%     A\in
+%     \partial_C\NN_u(\NNin;\wth),
+%     \quad
+%     \forall\wth\in\mathcal{W},
+%   \end{equation}
+%   where $\partial_C$ denotes the Clarke generalized Jacobian.
+% \end{lem}
 
-\begin{proof}
-  Define the compact convex set
-  \begin{equation}
-    \widetilde{\mathcal{W}}
-    :=
-    \operatorname{co}(\mathcal{W}),
-  \end{equation}
-  where $\operatorname{co}(\mathcal{W})$ denotes the convex hull of
-  $\mathcal{W}$.
-  Since the weight matrices are components of $\wth$, their norms are
-  uniformly bounded on $\widetilde{\mathcal{W}}$.
-  Thus, there exist constants
-  $\overline{V}_i\in\R_{>0}$ such that
-  \begin{equation}
-    \norm{\wV_i}
-    \leq
-    \overline{V}_i,
-    \qquad
-    \forall\wth\in\widetilde{\mathcal{W}}.
-  \end{equation}
+% \begin{proof}
+%   Define the compact convex set
+%   \begin{equation}
+%     \widetilde{\mathcal{W}}
+%     :=
+%     \operatorname{co}(\mathcal{W}),
+%   \end{equation}
+%   where $\operatorname{co}(\mathcal{W})$ denotes the convex hull of
+%   $\mathcal{W}$.
+%   Since the weight matrices are components of $\wth$, their norms are
+%   uniformly bounded on $\widetilde{\mathcal{W}}$.
+%   Thus, there exist constants
+%   $\overline{V}_i\in\R_{>0}$ such that
+%   \begin{equation}
+%     \norm{\wV_i}
+%     \leq
+%     \overline{V}_i,
+%     \qquad
+%     \forall\wth\in\widetilde{\mathcal{W}}.
+%   \end{equation}
 
-  Since the affine mappings and activation functions are continuous,
-  all layer outputs are continuous with respect to $\wth$.
-  Their continuity on the compact set
-  $\widetilde{\mathcal{W}}$ implies that there exist constants
-  $\overline{a}_i\in\R_{>0}$ satisfying
-  \begin{equation}
-    \norm{\act_i}
-    \leq
-    \overline{a}_i,
-    \qquad
-    \forall\wth\in\widetilde{\mathcal{W}},
-  \end{equation}
-  where
-  \begin{equation}
-    \act_0:=\NNin,
-    \qquad
-    \overline{a}_0:=\norm{\NNin}.
-  \end{equation}
+%   Since the affine mappings and activation functions are continuous,
+%   all layer outputs are continuous with respect to $\wth$.
+%   Their continuity on the compact set
+%   $\widetilde{\mathcal{W}}$ implies that there exist constants
+%   $\overline{a}_i\in\R_{>0}$ satisfying
+%   \begin{equation}
+%     \norm{\act_i}
+%     \leq
+%     \overline{a}_i,
+%     \qquad
+%     \forall\wth\in\widetilde{\mathcal{W}},
+%   \end{equation}
+%   where
+%   \begin{equation}
+%     \act_0:=\NNin,
+%     \qquad
+%     \overline{a}_0:=\norm{\NNin}.
+%   \end{equation}
 
-  Since $\phi_i$ is $L_{\phi_i}$-Lipschitz continuous,
-  Rademacher's theorem implies that it is differentiable almost
-  everywhere and
-  \begin{equation}
-    \norm{\act_i'}
-    \leq
-    L_{\phi_i}
-  \end{equation}
-  wherever the derivative exists.
-  The same bound holds for every element of its Clarke generalized
-  Jacobian at a nondifferentiability point.
+%   Since $\phi_i$ is $L_{\phi_i}$-Lipschitz continuous,
+%   Rademacher's theorem implies that it is differentiable almost
+%   everywhere and
+%   \begin{equation}
+%     \norm{\act_i'}
+%     \leq
+%     L_{\phi_i}
+%   \end{equation}
+%   wherever the derivative exists.
+%   The same bound holds for every element of its Clarke generalized
+%   Jacobian at a nondifferentiability point.
 
-  At a differentiability point, the Jacobian of the DNN with respect
-  to the weight block $\wth_i$ is
-  \begin{equation}
-    \ppfrac{\NN_u}{\wth_i}
-    =
-    \begin{cases}
-      I_{l_{L+1}}\otimes\act_L^\top,
-      & i=L,
-      \\[1mm]
-      \wV_L^\top\act_L'
-      \cdots
-      \wV_{i+1}^\top\act_{i+1}'
-      \left(
-        I_{l_{i+1}}\otimes\act_i^\top
-      \right),
-      & i\in\{0,\ldots,L-1\}.
-    \end{cases}
-  \end{equation}
-  Therefore, using the submultiplicativity of the induced matrix norm
-  and
-  \begin{equation}
-    \norm{I_p\otimes z^\top}
-    =
-    \norm{z},
-  \end{equation}
-  we obtain
-  \begin{equation}
-    \norm{
-      \ppfrac{\NN_u}{\wth_i}
-    }
-    \leq
-    \overline{a}_i
-    \prod_{j=i+1}^{L}
-    \left(
-      \overline{V}_jL_{\phi_j}
-    \right)
-    =:
-    G_i,
-    \qquad
-    i\in\{0,\ldots,L\},
-  \end{equation}
-  where the empty product for $i=L$ is defined as one.
+%   At a differentiability point, the Jacobian of the DNN with respect
+%   to the weight block $\wth_i$ is
+%   \begin{equation}
+%     \ppfrac{\NN_u}{\wth_i}
+%     =
+%     \begin{cases}
+%       I_{l_{L+1}}\otimes\act_L^\top,
+%       & i=L,
+%       \\[1mm]
+%       \wV_L^\top\act_L'
+%       \cdots
+%       \wV_{i+1}^\top\act_{i+1}'
+%       \left(
+%         I_{l_{i+1}}\otimes\act_i^\top
+%       \right),
+%       & i\in\{0,\ldots,L-1\}.
+%     \end{cases}
+%   \end{equation}
+%   Therefore, using the submultiplicativity of the induced matrix norm
+%   and
+%   \begin{equation}
+%     \norm{I_p\otimes z^\top}
+%     =
+%     \norm{z},
+%   \end{equation}
+%   we obtain
+%   \begin{equation}
+%     \norm{
+%       \ppfrac{\NN_u}{\wth_i}
+%     }
+%     \leq
+%     \overline{a}_i
+%     \prod_{j=i+1}^{L}
+%     \left(
+%       \overline{V}_jL_{\phi_j}
+%     \right)
+%     =:
+%     G_i,
+%     \qquad
+%     i\in\{0,\ldots,L\},
+%   \end{equation}
+%   where the empty product for $i=L$ is defined as one.
 
-  The complete Jacobian is given by
-  \begin{equation}
-    \ppfrac{\NN_u}{\wth}
-    =
-    \begin{bmatrix}
-      \ppdfrac{\NN_u}{\wth_L}
-      &
-      \ppdfrac{\NN_u}{\wth_{L-1}}
-      &
-      \cdots
-      &
-      \ppdfrac{\NN_u}{\wth_0}
-    \end{bmatrix}.
-  \end{equation}
-  Hence,
-  \begin{equation}
-    \norm{
-      \ppfrac{\NN_u}{\wth}
-    }
-    \leq
-    \left(
-      \sum_{i=0}^{L}G_i^2
-    \right)^{1/2}
-    =:
-    L_{\NN_u}.
-  \end{equation}
-  By the Clarke chain rule, the same bound holds at
-  nondifferentiability points:
-  \begin{equation}
-    \norm{A}
-    \leq
-    L_{\NN_u},
-    \qquad
-    \forall
-    A\in\partial_C\NN_u(\NNin;\wth).
-  \end{equation}
+%   The complete Jacobian is given by
+%   \begin{equation}
+%     \ppfrac{\NN_u}{\wth}
+%     =
+%     \begin{bmatrix}
+%       \ppdfrac{\NN_u}{\wth_L}
+%       &
+%       \ppdfrac{\NN_u}{\wth_{L-1}}
+%       &
+%       \cdots
+%       &
+%       \ppdfrac{\NN_u}{\wth_0}
+%     \end{bmatrix}.
+%   \end{equation}
+%   Hence,
+%   \begin{equation}
+%     \norm{
+%       \ppfrac{\NN_u}{\wth}
+%     }
+%     \leq
+%     \left(
+%       \sum_{i=0}^{L}G_i^2
+%     \right)^{1/2}
+%     =:
+%     L_{\NN_u}.
+%   \end{equation}
+%   By the Clarke chain rule, the same bound holds at
+%   nondifferentiability points:
+%   \begin{equation}
+%     \norm{A}
+%     \leq
+%     L_{\NN_u},
+%     \qquad
+%     \forall
+%     A\in\partial_C\NN_u(\NNin;\wth).
+%   \end{equation}
 
-  For arbitrary $\wth_1,\wth_2\in\mathcal{W}$, define
-  \begin{equation}
-    \gamma(s)
-    :=
-    \wth_2+s(\wth_1-\wth_2),
-    \qquad
-    s\in[0,1].
-  \end{equation}
-  Since
-  $\gamma(s)\in\widetilde{\mathcal{W}}$ and
-  $\NN_u(\NNin;\gamma(s))$ is absolutely continuous, the generalized
-  chain rule gives, for almost every $s\in[0,1]$,
-  \begin{equation}
-    \frac{d}{ds}
-    \NN_u(\NNin;\gamma(s))
-    =
-    A(s)(\wth_1-\wth_2)
-  \end{equation}
-  for some
-  $A(s)\in\partial_C\NN_u(\NNin;\gamma(s))$.
-  Consequently,
-  \begin{align}
-    &
-    \norm{
-      \NN_u(\NNin;\wth_1)
-      -
-      \NN_u(\NNin;\wth_2)
-    }
-    \nonumber\\
-    &\quad\leq
-    \int_0^1
-    \norm{A(s)}
-    \norm{\wth_1-\wth_2}
-    \,ds
-    \nonumber\\
-    &\quad\leq
-    L_{\NN_u}
-    \norm{\wth_1-\wth_2},
-  \end{align}
-  which proves \eqref{PRE:eq:NN:param:Lipschitz}.
-\end{proof}
+%   For arbitrary $\wth_1,\wth_2\in\mathcal{W}$, define
+%   \begin{equation}
+%     \gamma(s)
+%     :=
+%     \wth_2+s(\wth_1-\wth_2),
+%     \qquad
+%     s\in[0,1].
+%   \end{equation}
+%   Since
+%   $\gamma(s)\in\widetilde{\mathcal{W}}$ and
+%   $\NN_u(\NNin;\gamma(s))$ is absolutely continuous, the generalized
+%   chain rule gives, for almost every $s\in[0,1]$,
+%   \begin{equation}
+%     \frac{d}{ds}
+%     \NN_u(\NNin;\gamma(s))
+%     =
+%     A(s)(\wth_1-\wth_2)
+%   \end{equation}
+%   for some
+%   $A(s)\in\partial_C\NN_u(\NNin;\gamma(s))$.
+%   Consequently,
+%   \begin{align}
+%     &
+%     \norm{
+%       \NN_u(\NNin;\wth_1)
+%       -
+%       \NN_u(\NNin;\wth_2)
+%     }
+%     \nonumber\\
+%     &\quad\leq
+%     \int_0^1
+%     \norm{A(s)}
+%     \norm{\wth_1-\wth_2}
+%     \,ds
+%     \nonumber\\
+%     &\quad\leq
+%     L_{\NN_u}
+%     \norm{\wth_1-\wth_2},
+%   \end{align}
+%   which proves \eqref{PRE:eq:NN:param:Lipschitz}.
+% \end{proof}
 
-```latex
-\begin{lem}[Lipschitz continuity of a DNN with respect to its parameters]
-  \label{PRE:lem:NN:param:Lipschitz}
-  Consider the feedforward neural network
-  \begin{equation}
-    \begin{aligned}
-      \boldsymbol{h}_0
-      &=
-      \boldsymbol{x},
-      \\
-      \boldsymbol{h}_l
-      &=
-      \phi_l
-      \left(
-        W_l\boldsymbol{h}_{l-1}+\boldsymbol{b}_l
-      \right),
-      \qquad l\in\{1,\ldots,L\},
-      \\
-      \Phi(\boldsymbol{x};\boldsymbol{\theta})
-      &=
-      W_{L+1}\boldsymbol{h}_L+\boldsymbol{b}_{L+1},
-    \end{aligned}
-  \end{equation}
-  where $\boldsymbol{\theta}$ collects all weights and biases.
-  Suppose that each activation function $\phi_l$ is Lipschitz continuous with
-  constant $L_{\phi_l}$ and that
-  $\boldsymbol{\theta}$ belongs to a compact set
-  $\Theta\subset\mathbb{R}^{N_\theta}$.
-  Then, for every fixed input $\boldsymbol{x}$, there exists a constant
-  $L_\Phi(\boldsymbol{x})>0$ such that
-  \begin{equation}
-    \left\|
-      \Phi(\boldsymbol{x};\boldsymbol{\theta}_1)
-      -
-      \Phi(\boldsymbol{x};\boldsymbol{\theta}_2)
-    \right\|
-    \leq
-    L_\Phi(\boldsymbol{x})
-    \left\|
-      \boldsymbol{\theta}_1-\boldsymbol{\theta}_2
-    \right\|,
-    \qquad
-    \forall\boldsymbol{\theta}_1,\boldsymbol{\theta}_2\in\Theta.
-  \end{equation}
-  In particular, the result holds for the ReLU activation function with
-  $L_{\phi_l}=1$.
-\end{lem}
+% ```latex
+% \begin{lem}[Lipschitz continuity of a DNN with respect to its parameters]
+%   \label{PRE:lem:NN:param:Lipschitz}
+%   Consider the feedforward neural network
+%   \begin{equation}
+%     \begin{aligned}
+%       \boldsymbol{h}_0
+%       &=
+%       \boldsymbol{x},
+%       \\
+%       \boldsymbol{h}_l
+%       &=
+%       \phi_l
+%       \left(
+%         W_l\boldsymbol{h}_{l-1}+\boldsymbol{b}_l
+%       \right),
+%       \qquad l\in\{1,\ldots,L\},
+%       \\
+%       \Phi(\boldsymbol{x};\boldsymbol{\theta})
+%       &=
+%       W_{L+1}\boldsymbol{h}_L+\boldsymbol{b}_{L+1},
+%     \end{aligned}
+%   \end{equation}
+%   where $\boldsymbol{\theta}$ collects all weights and biases.
+%   Suppose that each activation function $\phi_l$ is Lipschitz continuous with
+%   constant $L_{\phi_l}$ and that
+%   $\boldsymbol{\theta}$ belongs to a compact set
+%   $\Theta\subset\mathbb{R}^{N_\theta}$.
+%   Then, for every fixed input $\boldsymbol{x}$, there exists a constant
+%   $L_\Phi(\boldsymbol{x})>0$ such that
+%   \begin{equation}
+%     \left\|
+%       \Phi(\boldsymbol{x};\boldsymbol{\theta}_1)
+%       -
+%       \Phi(\boldsymbol{x};\boldsymbol{\theta}_2)
+%     \right\|
+%     \leq
+%     L_\Phi(\boldsymbol{x})
+%     \left\|
+%       \boldsymbol{\theta}_1-\boldsymbol{\theta}_2
+%     \right\|,
+%     \qquad
+%     \forall\boldsymbol{\theta}_1,\boldsymbol{\theta}_2\in\Theta.
+%   \end{equation}
+%   In particular, the result holds for the ReLU activation function with
+%   $L_{\phi_l}=1$.
+% \end{lem}
 
-\begin{proof}
-  Since $\Theta$ is compact, the network parameters are uniformly bounded.
-  Thus, there exist constants $\overline{W}_l,\overline{b}_l>0$ such that
-  \begin{equation}
-    \|W_l\|\leq\overline{W}_l,
-    \qquad
-    \|\boldsymbol{b}_l\|\leq\overline{b}_l,
-    \qquad
-    \forall\boldsymbol{\theta}\in\Theta.
-  \end{equation}
-  For the fixed input $\boldsymbol{x}$, define
-  $\overline{h}_0:=\|\boldsymbol{x}\|$ and recursively select
-  $\overline{h}_l$ such that
-  \begin{equation}
-    \overline{h}_l
-    :=
-    \|\phi_l(\boldsymbol{0})\|
-    +
-    L_{\phi_l}
-    \left(
-      \overline{W}_l\overline{h}_{l-1}
-      +
-      \overline{b}_l
-    \right).
-  \end{equation}
-  The Lipschitz continuity of $\phi_l$ then gives
-  \begin{equation}
-    \|\boldsymbol{h}_l\|
-    \leq
-    \overline{h}_l,
-    \qquad
-    \forall\boldsymbol{\theta}\in\Theta.
-  \end{equation}
+% \begin{proof}
+%   Since $\Theta$ is compact, the network parameters are uniformly bounded.
+%   Thus, there exist constants $\overline{W}_l,\overline{b}_l>0$ such that
+%   \begin{equation}
+%     \|W_l\|\leq\overline{W}_l,
+%     \qquad
+%     \|\boldsymbol{b}_l\|\leq\overline{b}_l,
+%     \qquad
+%     \forall\boldsymbol{\theta}\in\Theta.
+%   \end{equation}
+%   For the fixed input $\boldsymbol{x}$, define
+%   $\overline{h}_0:=\|\boldsymbol{x}\|$ and recursively select
+%   $\overline{h}_l$ such that
+%   \begin{equation}
+%     \overline{h}_l
+%     :=
+%     \|\phi_l(\boldsymbol{0})\|
+%     +
+%     L_{\phi_l}
+%     \left(
+%       \overline{W}_l\overline{h}_{l-1}
+%       +
+%       \overline{b}_l
+%     \right).
+%   \end{equation}
+%   The Lipschitz continuity of $\phi_l$ then gives
+%   \begin{equation}
+%     \|\boldsymbol{h}_l\|
+%     \leq
+%     \overline{h}_l,
+%     \qquad
+%     \forall\boldsymbol{\theta}\in\Theta.
+%   \end{equation}
 
-  Let $\boldsymbol{h}_l^i$ denote the output of layer $l$ corresponding to
-  $\boldsymbol{\theta}_i$, where $i\in\{1,2\}$. Since the input is fixed,
-  \begin{equation}
-    \|\boldsymbol{h}_0^1-\boldsymbol{h}_0^2\|=0.
-  \end{equation}
-  For each hidden layer, the Lipschitz continuity of $\phi_l$ yields
-  \begin{align}
-    \|\boldsymbol{h}_l^1-\boldsymbol{h}_l^2\|
-    \leq
-    L_{\phi_l}
-    \Big(
-      &
-      \overline{W}_l
-      \|\boldsymbol{h}_{l-1}^1-\boldsymbol{h}_{l-1}^2\|
-      \nonumber\\
-      &+
-      (\overline{h}_{l-1}+1)
-      \|\boldsymbol{\theta}_1-\boldsymbol{\theta}_2\|
-    \Big).
-  \end{align}
-  Define $G_0:=0$ and
-  \begin{equation}
-    G_l
-    :=
-    L_{\phi_l}
-    \left(
-      \overline{W}_lG_{l-1}
-      +
-      \overline{h}_{l-1}
-      +
-      1
-    \right).
-  \end{equation}
-  It follows inductively that
-  \begin{equation}
-    \|\boldsymbol{h}_l^1-\boldsymbol{h}_l^2\|
-    \leq
-    G_l
-    \|\boldsymbol{\theta}_1-\boldsymbol{\theta}_2\|.
-  \end{equation}
-  Finally, the output layer satisfies
-  \begin{equation}
-    \left\|
-      \Phi(\boldsymbol{x};\boldsymbol{\theta}_1)
-      -
-      \Phi(\boldsymbol{x};\boldsymbol{\theta}_2)
-    \right\|
-    \leq
-    \left(
-      \overline{W}_{L+1}G_L
-      +
-      \overline{h}_L
-      +
-      1
-    \right)
-    \|\boldsymbol{\theta}_1-\boldsymbol{\theta}_2\|.
-  \end{equation}
-  Therefore, the result follows by selecting
-  \begin{equation}
-    L_\Phi(\boldsymbol{x})
-    :=
-    \overline{W}_{L+1}G_L
-    +
-    \overline{h}_L
-    +
-    1.
-  \end{equation}
+%   Let $\boldsymbol{h}_l^i$ denote the output of layer $l$ corresponding to
+%   $\boldsymbol{\theta}_i$, where $i\in\{1,2\}$. Since the input is fixed,
+%   \begin{equation}
+%     \|\boldsymbol{h}_0^1-\boldsymbol{h}_0^2\|=0.
+%   \end{equation}
+%   For each hidden layer, the Lipschitz continuity of $\phi_l$ yields
+%   \begin{align}
+%     \|\boldsymbol{h}_l^1-\boldsymbol{h}_l^2\|
+%     \leq
+%     L_{\phi_l}
+%     \Big(
+%       &
+%       \overline{W}_l
+%       \|\boldsymbol{h}_{l-1}^1-\boldsymbol{h}_{l-1}^2\|
+%       \nonumber\\
+%       &+
+%       (\overline{h}_{l-1}+1)
+%       \|\boldsymbol{\theta}_1-\boldsymbol{\theta}_2\|
+%     \Big).
+%   \end{align}
+%   Define $G_0:=0$ and
+%   \begin{equation}
+%     G_l
+%     :=
+%     L_{\phi_l}
+%     \left(
+%       \overline{W}_lG_{l-1}
+%       +
+%       \overline{h}_{l-1}
+%       +
+%       1
+%     \right).
+%   \end{equation}
+%   It follows inductively that
+%   \begin{equation}
+%     \|\boldsymbol{h}_l^1-\boldsymbol{h}_l^2\|
+%     \leq
+%     G_l
+%     \|\boldsymbol{\theta}_1-\boldsymbol{\theta}_2\|.
+%   \end{equation}
+%   Finally, the output layer satisfies
+%   \begin{equation}
+%     \left\|
+%       \Phi(\boldsymbol{x};\boldsymbol{\theta}_1)
+%       -
+%       \Phi(\boldsymbol{x};\boldsymbol{\theta}_2)
+%     \right\|
+%     \leq
+%     \left(
+%       \overline{W}_{L+1}G_L
+%       +
+%       \overline{h}_L
+%       +
+%       1
+%     \right)
+%     \|\boldsymbol{\theta}_1-\boldsymbol{\theta}_2\|.
+%   \end{equation}
+%   Therefore, the result follows by selecting
+%   \begin{equation}
+%     L_\Phi(\boldsymbol{x})
+%     :=
+%     \overline{W}_{L+1}G_L
+%     +
+%     \overline{h}_L
+%     +
+%     1.
+%   \end{equation}
 
-  For the componentwise ReLU activation function,
-  \begin{equation}
-    \|\operatorname{ReLU}(\boldsymbol{a})
-      -\operatorname{ReLU}(\boldsymbol{b})\|
-    \leq
-    \|\boldsymbol{a}-\boldsymbol{b}\|,
-  \end{equation}
-  and hence $L_{\phi_l}=1$, which completes the proof.
-\end{proof}
-```
+%   For the componentwise ReLU activation function,
+%   \begin{equation}
+%     \|\operatorname{ReLU}(\boldsymbol{a})
+%       -\operatorname{ReLU}(\boldsymbol{b})\|
+%     \leq
+%     \|\boldsymbol{a}-\boldsymbol{b}\|,
+%   \end{equation}
+%   and hence $L_{\phi_l}=1$, which completes the proof.
+% \end{proof}
